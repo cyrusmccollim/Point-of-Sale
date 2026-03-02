@@ -1,5 +1,7 @@
 package pos.util;
 
+import pos.model.Department;
+
 import java.io.*;
 import java.util.Properties;
 
@@ -19,6 +21,7 @@ public class Config {
     private static final String DEFAULT_RECEIPT_FOLDER = "receipts";
     private static final String DEFAULT_THEME = "light";
     private static final String DEFAULT_DB_PATH = "pos_database.db";
+    private static final String DEFAULT_DEPARTMENT = "DELI";
 
     private Config() {
         properties = new Properties();
@@ -56,6 +59,9 @@ public class Config {
         }
         if (!properties.containsKey("db.path")) {
             properties.setProperty("db.path", DEFAULT_DB_PATH);
+        }
+        if (!properties.containsKey("department")) {
+            properties.setProperty("department", DEFAULT_DEPARTMENT);
         }
     }
 
@@ -109,5 +115,19 @@ public class Config {
 
     public void setDbPath(String path) {
         properties.setProperty("db.path", path);
+    }
+
+    // Department configuration
+    public Department getDepartment() {
+        String deptName = properties.getProperty("department", DEFAULT_DEPARTMENT);
+        return Department.fromDisplayName(deptName);
+    }
+
+    public void setDepartment(Department department) {
+        properties.setProperty("department", department.name());
+    }
+
+    public void setDepartment(String departmentName) {
+        properties.setProperty("department", departmentName);
     }
 }

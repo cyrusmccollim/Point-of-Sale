@@ -44,6 +44,20 @@ public class Cart {
         recalculateTotal();
     }
 
+    /**
+     * Adds a product with quantity and weight (for weighed goods).
+     * Each addition is a separate cart item for weighed goods.
+     *
+     * @param product  The product to add
+     * @param quantity The quantity
+     * @param weight   The weight in pounds
+     */
+    public void addItem(Product product, double quantity, double weight) {
+        // For weighed goods, always add as new item (don't merge)
+        items.add(new CartItem(product, quantity, weight));
+        recalculateTotal();
+    }
+
     public void removeItem(int index) {
         if (index >= 0 && index < items.size()) {
             items.remove(index);

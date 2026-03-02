@@ -2,6 +2,7 @@ package pos.ui.components;
 
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
+import pos.model.PendingCartItem;
 import pos.model.Product;
 import pos.util.Utility;
 
@@ -13,14 +14,16 @@ import java.awt.event.MouseEvent;
 
 /**
  * A clickable card component that displays product information.
+ * Clicking selects the product for the pending item workflow.
  */
-public class ProductCard extends JPanel {
+public class ProductCard extends JPanel implements ApplicationState.StateChangeListener {
     private final Product product;
     private boolean selected = false;
 
     public ProductCard(Product product) {
         this.product = product;
         initialize();
+        ApplicationState.getInstance().addStateChangeListener(this);
     }
 
     private void initialize() {
@@ -53,10 +56,10 @@ public class ProductCard extends JPanel {
         nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
         add(nameLabel, gbc);
 
-        // Price (smaller, bottom)
+        // Price (smaller, bottom) - shows per-lb price for weighed goods
         gbc.gridy = 2;
         gbc.weighty = 0.3;
-        JLabel priceLabel = new JLabel(Utility.formatPrice(product.getPrice()), SwingConstants.CENTER);
+        JLabel priceLabel = new JLabel(Utility.formatPrice(product.getPrice()) + "/lb", SwingConstants.CENTER);
         priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         priceLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
         add(priceLabel, gbc);
@@ -83,20 +86,12 @@ public class ProductCard extends JPanel {
     }
 
     private void handleClicked() {
-        // Add product to cart
-        ApplicationState.getInstance().addToCart(product);
+        // Set this product as the pending item (new workflow)
+        ApplicationState.getInstance().setPendingProduct(product);
 
-        // Visual feedback
+        // Visual feedback - persistent selection
         selected = true;
         applySelectedStyle();
-
-        // Reset after animation
-        Timer timer = new Timer(150, e -> {
-            selected = false;
-            applyNormalStyle();
-        });
-        timer.setRepeats(false);
-        timer.start();
     }
 
     private void handleHover(boolean isHovering) {
@@ -116,8 +111,8 @@ public class ProductCard extends JPanel {
     private void applySelectedStyle() {
         setBackground(ThemeManager.getInstance().getOrangeColor());
         setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInstance().getOrangeColor(), 2, true),
-                new EmptyBorder(10, 10, 10, 10)
+                BorderFactory.createLineBorder(ThemeManager.getInstance().getOrangeColor(), 3, true),
+                new EmptyBorder(9, 9, 9, 9)
         ));
     }
 
@@ -133,6 +128,14 @@ public class ProductCard extends JPanel {
         ));
     }
 
+    /**
+     * Clears the selection state.
+     */
+    public void clearSelection() {
+        selected = false;
+        applyNormalStyle();
+    }
+
     private String truncate(String text, int maxLength) {
         if (text.length() <= maxLength) {
             return text;
@@ -144,11 +147,28 @@ public class ProductCard extends JPanel {
         return product;
     }
 
+    @Override
+    public void onPendingItemChanged(PendingCartItem item) {
+        // Check if this card should be selected
+        boolean shouldSelect = item != null && item.getProduct().getCpu().equals(product.getCpu());
+        if (shouldSelect != selected) {
+            selected = shouldSelect;
+            if (selected) {
+                applySelectedStyle();
+            } else {
+                applyNormalStyle();
+            }
+        }
+    }
+
     /**
      * Updates the card's theme colors.
      */
     public void updateTheme() {
         applyThemeColors();
+        if (selected) {
+            applySelectedStyle();
+        }
         for (Component comp : getComponents()) {
             if (comp instanceof JLabel label) {
                 if (comp == getComponent(0)) { // CPU label

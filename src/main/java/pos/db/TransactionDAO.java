@@ -37,7 +37,7 @@ public class TransactionDAO {
      */
     public int saveTransaction(Transaction transaction) {
         String insertTransaction = "INSERT INTO transactions (timestamp, total, receipt_path) VALUES (?, ?, ?)";
-        String insertItem = "INSERT INTO transaction_items (transaction_id, product_name, product_cpu, quantity, unit_price) VALUES (?, ?, ?, ?, ?)";
+        String insertItem = "INSERT INTO transaction_items (transaction_id, product_name, product_cpu, quantity, weight, unit_price) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = dbManager.getConnection()) {
             conn.setAutoCommit(false);
@@ -65,7 +65,8 @@ public class TransactionDAO {
                             itemStmt.setString(2, item.getProductName());
                             itemStmt.setString(3, item.getProductCpu());
                             itemStmt.setInt(4, item.getQuantity());
-                            itemStmt.setDouble(5, item.getUnitPrice());
+                            itemStmt.setDouble(5, item.getWeight());
+                            itemStmt.setDouble(6, item.getUnitPrice());
                             itemStmt.addBatch();
                         }
                         itemStmt.executeBatch();
@@ -162,7 +163,7 @@ public class TransactionDAO {
      */
     private List<TransactionItem> loadTransactionItems(Connection conn, int transactionId) throws SQLException {
         List<TransactionItem> items = new ArrayList<>();
-        String sql = "SELECT product_name, product_cpu, quantity, unit_price FROM transaction_items WHERE transaction_id = ?";
+        String sql = "SELECT product_name, product_cpu, quantity, weight, unit_price FROM transaction_items WHERE transaction_id = ?";
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, transactionId);
@@ -173,6 +174,7 @@ public class TransactionDAO {
                         rs.getString("product_name"),
                         rs.getString("product_cpu"),
                         rs.getInt("quantity"),
+                        rs.getDouble("weight"),
                         rs.getDouble("unit_price")
                 );
                 items.add(item);

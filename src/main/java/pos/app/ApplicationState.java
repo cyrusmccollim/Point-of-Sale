@@ -2,8 +2,13 @@ package pos.app;
 
 import pos.db.ProductDAO;
 import pos.model.Cart;
+import pos.model.Department;
+import pos.model.PendingCartItem;
 import pos.model.Product;
+import pos.util.Config;
+import pos.util.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,12 +20,15 @@ public class ApplicationState {
     private Cart cart;
     private List<Product> products;
     private Product selectedProduct;
+    private PendingCartItem pendingItem;
+    private Department currentDepartment;
     private String currentInput;
     private InputMode inputMode;
+    private final List<StateChangeListener> listeners = new ArrayList<>();
 
     public enum InputMode {
         QUANTITY,
-        PRICE,
+        WEIGHT,
         SEARCH,
         NONE
     }
@@ -29,6 +37,7 @@ public class ApplicationState {
         this.cart = new Cart();
         this.currentInput = "";
         this.inputMode = InputMode.NONE;
+        this.currentDepartment = Config.getInstance().getDepartment();
     }
 
     public static ApplicationState getInstance() {
@@ -39,29 +48,60 @@ public class ApplicationState {
      * Initializes the application state with products.
      */
     public void initialize() {
+        this.currentDepartment = Config.getInstance().getDepartment();
         loadProducts();
     }
 
     /**
-     * Loads products from the database or CSV fallback.
+     * Loads products from the database or CSV fallback for the current department.
      */
     private void loadProducts() {
-        // Try to load from database first
+        // Try to load from department-specific CSV first
+        String csvPath = getDepartmentCsvPath();
+        if (csvPath != null) {
+            products = ProductDAO.getInstance().loadFromCsv(csvPath);
+            if (!products.isEmpty()) {
+                Logger.info("Loaded " + products.size() + " products for department: " + currentDepartment);
+                notifyProductsChanged();
+                return;
+            }
+        }
+
+        // Fallback to database
         products = ProductDAO.getInstance().loadAllProducts();
 
-        // If database is empty, try to import from CSV
+        // If database is empty, try generic CSV
         if (products.isEmpty()) {
-            String csvPath = getProductsCsvPath();
-            if (csvPath != null) {
-                ProductDAO.getInstance().importFromCsv(csvPath);
+            String genericPath = getProductsCsvPath();
+            if (genericPath != null) {
+                ProductDAO.getInstance().importFromCsv(genericPath);
                 products = ProductDAO.getInstance().loadAllProducts();
             }
 
-            // If still empty, load directly from CSV without database
-            if (products.isEmpty() && csvPath != null) {
-                products = ProductDAO.getInstance().loadFromCsv(csvPath);
+            if (products.isEmpty() && genericPath != null) {
+                products = ProductDAO.getInstance().loadFromCsv(genericPath);
             }
         }
+
+        Logger.info("Loaded " + products.size() + " products");
+        notifyProductsChanged();
+    }
+
+    private String getDepartmentCsvPath() {
+        String catalogPath = currentDepartment.getCatalogPath();
+        String[] paths = {
+                catalogPath,
+                "src/main/resources/" + catalogPath,
+                "../" + catalogPath
+        };
+
+        for (String path : paths) {
+            java.io.File file = new java.io.File(path);
+            if (file.exists()) {
+                return path;
+            }
+        }
+        return null;
     }
 
     private String getProductsCsvPath() {
@@ -178,5 +218,107 @@ public class ApplicationState {
 
     public void addToCart(Product product, double quantity) {
         cart.addItem(product, quantity);
+    }
+
+    public void addToCart(Product product, double quantity, double weight) {
+        cart.addItem(product, quantity, weight);
+    }
+
+    // Department management
+    public Department getCurrentDepartment() {
+        return currentDepartment;
+    }
+
+    public void setCurrentDepartment(Department department) {
+        if (department != this.currentDepartment) {
+            this.currentDepartment = department;
+            Config.getInstance().setDepartment(department);
+            Config.getInstance().save();
+            clearPendingItem();
+            loadProducts();
+            notifyDepartmentChanged();
+        }
+    }
+
+    // Pending item management (new workflow)
+    public PendingCartItem getPendingItem() {
+        return pendingItem;
+    }
+
+    public boolean hasPendingItem() {
+        return pendingItem != null;
+    }
+
+    public void setPendingProduct(Product product) {
+        this.pendingItem = new PendingCartItem(product);
+        this.selectedProduct = product;
+        clearInput();
+        notifyPendingItemChanged();
+    }
+
+    public void updatePendingQuantity(double quantity) {
+        if (pendingItem != null) {
+            pendingItem.setQuantity(quantity);
+            notifyPendingItemChanged();
+        }
+    }
+
+    public void updatePendingWeight(double weight) {
+        if (pendingItem != null) {
+            pendingItem.setWeight(weight);
+            notifyPendingItemChanged();
+        }
+    }
+
+    public boolean confirmPendingItem() {
+        if (pendingItem != null && pendingItem.canConfirm()) {
+            cart.addItem(pendingItem.getProduct(), pendingItem.getQuantity(), pendingItem.getWeight());
+            clearPendingItem();
+            return true;
+        }
+        return false;
+    }
+
+    public void clearPendingItem() {
+        this.pendingItem = null;
+        this.selectedProduct = null;
+        clearInput();
+        notifyPendingItemChanged();
+    }
+
+    // State change listeners
+    public void addStateChangeListener(StateChangeListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeStateChangeListener(StateChangeListener listener) {
+        listeners.remove(listener);
+    }
+
+    private void notifyPendingItemChanged() {
+        for (StateChangeListener listener : listeners) {
+            listener.onPendingItemChanged(pendingItem);
+        }
+    }
+
+    private void notifyDepartmentChanged() {
+        for (StateChangeListener listener : listeners) {
+            listener.onDepartmentChanged(currentDepartment);
+        }
+    }
+
+    private void notifyProductsChanged() {
+        for (StateChangeListener listener : listeners) {
+            listener.onProductsChanged(products);
+        }
+    }
+
+    /**
+     * Listener interface for state changes.
+     */
+    public interface StateChangeListener {
+        default void onPendingItemChanged(PendingCartItem item) {}
+        default void onDepartmentChanged(Department department) {}
+        default void onProductsChanged(List<Product> products) {}
     }
 }

@@ -3,10 +3,11 @@ package pos.app;
 import pos.db.DatabaseManager;
 import pos.db.TransactionDAO;
 import pos.model.Cart;
+import pos.model.PendingCartItem;
 import pos.model.Transaction;
 import pos.model.TransactionItem;
 import pos.ui.components.CartPanel;
-import pos.ui.components.MetricPanel;
+import pos.ui.components.CurrentItemPanel;
 import pos.ui.components.NumberPad;
 import pos.ui.dialogs.ConfirmationDialog;
 import pos.ui.dialogs.ReceiptDialog;
@@ -37,7 +38,7 @@ public class POSApplication extends JFrame {
     private CheckoutPanel checkoutPanel;
     private HistoryPanel historyPanel;
     private SettingsPanel settingsPanel;
-    private MetricPanel[] metricPanels;
+    private CurrentItemPanel currentItemPanel;
     private NumberPad numberPad;
 
     // Navigation
@@ -115,12 +116,8 @@ public class POSApplication extends JFrame {
     }
 
     private void createComponents() {
-        // Create metric panels
-        metricPanels = new MetricPanel[4];
-        metricPanels[0] = new MetricPanel("Total", "$0.00");
-        metricPanels[1] = new MetricPanel("Items", "0");
-        metricPanels[2] = new MetricPanel("Weight", "0.0");
-        metricPanels[3] = new MetricPanel("Selected", "--");
+        // Create current item panel (new top panel)
+        currentItemPanel = new CurrentItemPanel();
 
         // Create main panels
         productsPanel = new ProductsPanel();
@@ -136,9 +133,8 @@ public class POSApplication extends JFrame {
     private void layoutComponents() {
         setLayout(new BorderLayout(10, 10));
 
-        // Top: Metrics panel
-        JPanel metricsPanel = createMetricsPanel();
-        add(metricsPanel, BorderLayout.NORTH);
+        // Top: Current item panel
+        add(currentItemPanel, BorderLayout.NORTH);
 
         // Center: Main content with card layout
         cardLayout = new CardLayout();
@@ -159,21 +155,6 @@ public class POSApplication extends JFrame {
         // Bottom: Navigation
         JPanel navPanel = createNavigationPanel();
         add(navPanel, BorderLayout.SOUTH);
-    }
-
-    private JPanel createMetricsPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 4, 10, 10));
-        panel.setBackground(ThemeManager.getInstance().getOrangeColor());
-        panel.setBorder(new EmptyBorder(10, 15, 10, 15));
-
-        for (MetricPanel metric : metricPanels) {
-            JPanel wrapper = new JPanel(new BorderLayout());
-            wrapper.setBackground(ThemeManager.getInstance().getOrangeColor());
-            wrapper.add(metric, BorderLayout.CENTER);
-            panel.add(wrapper);
-        }
-
-        return panel;
     }
 
     private JPanel createProductsView() {
@@ -255,24 +236,66 @@ public class POSApplication extends JFrame {
 
     private void handleNumberPadAction(String key) {
         switch (key) {
-            case NumberPad.ENTER -> handleEnter();
+            case NumberPad.CONFIRM -> handleConfirm();
             case NumberPad.DELETE -> handleDelete();
             case NumberPad.SETTINGS -> switchView(SETTINGS_VIEW);
-            case NumberPad.SEARCH -> productsPanel.focusSearch();
-            case NumberPad.PRINT -> handlePrint();
+            case NumberPad.QTY -> handleQtyMode();
+            case NumberPad.WT -> handleWtMode();
             default -> {
-                // Numeric input handled by ApplicationState
-                updateMetricsFromInput();
+                // Numeric input - apply to current mode
+                handleNumericInput();
             }
         }
     }
 
-    private void handleEnter() {
-        if (currentView.equals(CHECKOUT_VIEW)) {
-            processCheckout();
+    private void handleQtyMode() {
+        // Already in quantity mode from NumberPad
+    }
+
+    private void handleWtMode() {
+        // Already in weight mode from NumberPad
+    }
+
+    private void handleNumericInput() {
+        ApplicationState state = ApplicationState.getInstance();
+        double inputValue = state.getCurrentInputAsDouble();
+
+        if (state.hasPendingItem()) {
+            ApplicationState.InputMode mode = numberPad.getCurrentMode();
+            if (mode == ApplicationState.InputMode.QUANTITY) {
+                state.updatePendingQuantity(inputValue);
+                currentItemPanel.updateQuantity(inputValue);
+            } else if (mode == ApplicationState.InputMode.WEIGHT) {
+                state.updatePendingWeight(inputValue);
+                currentItemPanel.updateWeight(inputValue);
+            }
+        }
+    }
+
+    private void handleConfirm() {
+        ApplicationState state = ApplicationState.getInstance();
+
+        if (state.hasPendingItem()) {
+            // Try to confirm the pending item
+            if (state.confirmPendingItem()) {
+                cartPanel.updateCart();
+                currentItemPanel.updateCartTotal();
+                currentItemPanel.clearDisplay();
+                numberPad.clearDisplay();
+                Logger.info("Item added to cart");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Please enter a weight greater than 0 before confirming.",
+                        "Weight Required",
+                        JOptionPane.WARNING_MESSAGE);
+            }
         } else {
-            // Switch to checkout view
-            switchView(CHECKOUT_VIEW);
+            // No pending item - switch to checkout if we have items in cart
+            if (currentView.equals(CHECKOUT_VIEW)) {
+                processCheckout();
+            } else if (!state.getCart().isEmpty()) {
+                switchView(CHECKOUT_VIEW);
+            }
         }
     }
 
@@ -282,7 +305,7 @@ public class POSApplication extends JFrame {
         if (selectedIndex >= 0) {
             ApplicationState.getInstance().getCart().removeItem(selectedIndex);
             cartPanel.updateCart();
-            updateMetrics();
+            currentItemPanel.updateCartTotal();
         }
     }
 
@@ -294,16 +317,9 @@ public class POSApplication extends JFrame {
     }
 
     private void handleCartUpdate() {
-        updateMetrics();
+        currentItemPanel.updateCartTotal();
         if (currentView.equals(CHECKOUT_VIEW)) {
             checkoutPanel.updateCheckout();
-        }
-    }
-
-    private void updateMetricsFromInput() {
-        String input = ApplicationState.getInstance().getCurrentInput();
-        if (!input.isEmpty()) {
-            metricPanels[3].setValue("Qty: " + input);
         }
     }
 
@@ -361,7 +377,8 @@ public class POSApplication extends JFrame {
             ApplicationState.getInstance().clearCart();
             cartPanel.clearCart();
             checkoutPanel.clearCheckout();
-            updateMetrics();
+            currentItemPanel.updateCartTotal();
+            currentItemPanel.clearDisplay();
 
             Logger.info("Transaction #" + transactionId + " completed successfully");
 
@@ -400,28 +417,6 @@ public class POSApplication extends JFrame {
     private void clearInput() {
         ApplicationState.getInstance().clearInput();
         numberPad.clearDisplay();
-        updateMetrics();
-    }
-
-    private void updateMetrics() {
-        Cart cart = ApplicationState.getInstance().getCart();
-
-        // Total
-        metricPanels[0].setPriceValue(cart.getTotal());
-
-        // Items count
-        metricPanels[1].setValue(String.valueOf(cart.getItemCount()));
-
-        // Total quantity
-        metricPanels[2].setValue(String.format("%.1f", cart.getTotalQuantity()));
-
-        // Selected product (from input)
-        String input = ApplicationState.getInstance().getCurrentInput();
-        if (!input.isEmpty()) {
-            metricPanels[3].setValue("Qty: " + input);
-        } else {
-            metricPanels[3].setValue("--");
-        }
     }
 
     /**
@@ -437,10 +432,7 @@ public class POSApplication extends JFrame {
         historyPanel.updateTheme();
         settingsPanel.updateTheme();
         numberPad.updateTheme();
-
-        for (MetricPanel panel : metricPanels) {
-            panel.updateTheme();
-        }
+        currentItemPanel.updateTheme();
 
         SwingUtilities.updateComponentTreeUI(this);
     }

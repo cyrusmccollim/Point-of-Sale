@@ -82,7 +82,18 @@ public class Transaction {
         receipt.append("--------------------------------\n");
 
         for (TransactionItem item : items) {
-            String itemLine = String.format("%s x %d", item.getProductName(), item.getQuantity());
+            String itemLine;
+            if (item.isWeighedItem()) {
+                // Format: "Product Name    2 x 1.50 lb @ $8.99/lb"
+                itemLine = String.format("%-16s %d x %.2f lb",
+                        truncate(item.getProductName(), 16),
+                        item.getQuantity(),
+                        item.getWeight());
+            } else {
+                itemLine = String.format("%-16s x%d",
+                        truncate(item.getProductName(), 16),
+                        item.getQuantity());
+            }
             String priceLine = String.format("$%.2f", item.getSubtotal());
             receipt.append(String.format("%-24s%8s\n", itemLine, priceLine));
         }
@@ -94,6 +105,16 @@ public class Transaction {
         receipt.append(separator);
 
         return receipt.toString();
+    }
+
+    private String truncate(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength - 2) + "..";
     }
 
     private String centerText(String text, int width) {

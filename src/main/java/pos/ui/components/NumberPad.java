@@ -13,18 +13,22 @@ import java.util.List;
 
 /**
  * A number pad component with numeric buttons and action buttons.
+ * Supports QTY, WT, and CONFIRM modes for weighed goods workflow.
  */
 public class NumberPad extends JPanel {
     private final List<NumberPadListener> listeners = new ArrayList<>();
     private JTextField displayField;
     private JLabel modeLabel;
+    private ApplicationState.InputMode currentMode = ApplicationState.InputMode.NONE;
 
     public static final String DELETE = "DELETE";
-    public static final String ENTER = "ENTER";
+    public static final String CONFIRM = "CONFIRM";
     public static final String SETTINGS = "SETTINGS";
     public static final String SEARCH = "SEARCH";
     public static final String PRINT = "PRINT";
     public static final String CLEAR = "CLEAR";
+    public static final String QTY = "QTY";
+    public static final String WT = "WT";
 
     public NumberPad() {
         initialize();
@@ -53,7 +57,7 @@ public class NumberPad extends JPanel {
         ));
 
         // Mode label
-        modeLabel = new JLabel(" ", SwingConstants.CENTER);
+        modeLabel = new JLabel("Enter weight or quantity", SwingConstants.CENTER);
         modeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         modeLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         panel.add(modeLabel, BorderLayout.NORTH);
@@ -75,13 +79,13 @@ public class NumberPad extends JPanel {
         JPanel panel = new JPanel(new GridLayout(5, 3, 10, 10));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        // Button layout: 1-9, delete/0/enter, settings/search/print
+        // New button layout with QTY, WT, CONFIRM
         String[] layout = {
                 "7", "8", "9",
                 "4", "5", "6",
                 "1", "2", "3",
-                DELETE, "0", ENTER,
-                SETTINGS, SEARCH, PRINT
+                DELETE, "0", CONFIRM,
+                QTY, WT, SETTINGS
         };
 
         for (String key : layout) {
@@ -105,30 +109,43 @@ public class NumberPad extends JPanel {
             button.setBackground(ThemeManager.getInstance().getSecondaryColor());
             button.setForeground(ThemeManager.getInstance().getTextColor());
         } else {
-            // Action button with icon
-            button.setBackground(ThemeManager.getInstance().getAccentColor());
-            button.setForeground(Color.WHITE);
-
+            // Action button
             switch (key) {
                 case DELETE -> {
                     button.setIcon(IconManager.getInstance().getIcon(IconManager.DELETE, 32, 32));
-                    button.setToolTipText("Delete");
+                    button.setToolTipText("Delete/Clear");
+                    button.setBackground(ThemeManager.getInstance().getAccentColor());
+                    button.setForeground(Color.WHITE);
                 }
-                case ENTER -> {
+                case CONFIRM -> {
                     button.setIcon(IconManager.getInstance().getIcon(IconManager.CHECK, 32, 32));
-                    button.setToolTipText("Enter/Checkout");
+                    button.setToolTipText("Add to Cart");
+                    button.setBackground(ThemeManager.getInstance().getOrangeColor());
+                    button.setForeground(Color.WHITE);
                 }
                 case SETTINGS -> {
                     button.setIcon(IconManager.getInstance().getIcon(IconManager.SETTINGS, 32, 32));
                     button.setToolTipText("Settings");
+                    button.setBackground(ThemeManager.getInstance().getAccentColor());
+                    button.setForeground(Color.WHITE);
                 }
-                case SEARCH -> {
-                    button.setIcon(IconManager.getInstance().getIcon(IconManager.SEARCH, 32, 32));
-                    button.setToolTipText("Search");
+                case QTY -> {
+                    button.setText("QTY");
+                    button.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    button.setToolTipText("Set Quantity");
+                    button.setBackground(ThemeManager.getInstance().getSecondaryColor());
+                    button.setForeground(ThemeManager.getInstance().getTextColor());
                 }
-                case PRINT -> {
-                    button.setIcon(IconManager.getInstance().getIcon(IconManager.PRINT, 32, 32));
-                    button.setToolTipText("Print Receipt");
+                case WT -> {
+                    button.setText("WT");
+                    button.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    button.setToolTipText("Set Weight (lb)");
+                    button.setBackground(ThemeManager.getInstance().getSecondaryColor());
+                    button.setForeground(ThemeManager.getInstance().getTextColor());
+                }
+                default -> {
+                    button.setBackground(ThemeManager.getInstance().getAccentColor());
+                    button.setForeground(Color.WHITE);
                 }
             }
         }
@@ -148,14 +165,26 @@ public class NumberPad extends JPanel {
                 updateDisplay();
                 notifyListeners(DELETE);
             }
-            case ENTER -> {
-                notifyListeners(ENTER);
+            case CONFIRM -> {
+                notifyListeners(CONFIRM);
                 ApplicationState.getInstance().clearInput();
                 updateDisplay();
             }
             case SETTINGS -> notifyListeners(SETTINGS);
             case SEARCH -> notifyListeners(SEARCH);
             case PRINT -> notifyListeners(PRINT);
+            case QTY -> {
+                currentMode = ApplicationState.InputMode.QUANTITY;
+                ApplicationState.getInstance().setInputMode(currentMode);
+                setModeText("QUANTITY MODE");
+                notifyListeners(QTY);
+            }
+            case WT -> {
+                currentMode = ApplicationState.InputMode.WEIGHT;
+                ApplicationState.getInstance().setInputMode(currentMode);
+                setModeText("WEIGHT MODE (lb)");
+                notifyListeners(WT);
+            }
             default -> {
                 // Numeric input
                 ApplicationState.getInstance().appendInput(key);
@@ -180,11 +209,19 @@ public class NumberPad extends JPanel {
     }
 
     /**
-     * Clears the display.
+     * Clears the display and resets mode.
      */
     public void clearDisplay() {
         displayField.setText("");
-        modeLabel.setText(" ");
+        currentMode = ApplicationState.InputMode.NONE;
+        setModeText("Enter weight or quantity");
+    }
+
+    /**
+     * Gets the current input mode.
+     */
+    public ApplicationState.InputMode getCurrentMode() {
+        return currentMode;
     }
 
     /**

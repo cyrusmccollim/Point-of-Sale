@@ -1,6 +1,8 @@
 package pos.ui.panels;
 
+import pos.app.ApplicationState;
 import pos.app.ThemeManager;
+import pos.model.Department;
 import pos.util.Config;
 
 import javax.swing.*;
@@ -15,6 +17,7 @@ public class SettingsPanel extends JPanel {
     private final JTextField storeAddressField = new JTextField(30);
     private final JTextField receiptFolderField = new JTextField(30);
     private final JCheckBox darkModeCheckBox = new JCheckBox("Dark Mode");
+    private final JComboBox<Department> departmentComboBox = new JComboBox<>(Department.values());
 
     public SettingsPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -64,6 +67,33 @@ public class SettingsPanel extends JPanel {
         gbc.weightx = 1.0;
 
         int row = 0;
+
+        // Department selector
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        JLabel departmentLabel = new JLabel("Department:");
+        departmentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        departmentLabel.setForeground(ThemeManager.getInstance().getTextColor());
+        panel.add(departmentLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        departmentComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        departmentComboBox.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+        departmentComboBox.setForeground(ThemeManager.getInstance().getTextColor());
+        departmentComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Department dept) {
+                    setText(dept.getDisplayName());
+                }
+                return this;
+            }
+        });
+        panel.add(departmentComboBox, gbc);
 
         // Store Name
         gbc.gridy = row++;
@@ -166,6 +196,7 @@ public class SettingsPanel extends JPanel {
         storeAddressField.setText(config.getStoreAddress());
         receiptFolderField.setText(config.getReceiptFolder());
         darkModeCheckBox.setSelected(ThemeManager.getInstance().isDarkMode());
+        departmentComboBox.setSelectedItem(config.getDepartment());
     }
 
     private void saveSettings() {
@@ -174,6 +205,14 @@ public class SettingsPanel extends JPanel {
         config.setStoreAddress(storeAddressField.getText().trim());
         config.setReceiptFolder(receiptFolderField.getText().trim());
         config.setTheme(darkModeCheckBox.isSelected() ? "dark" : "light");
+
+        // Save department and trigger catalog reload
+        Department selectedDept = (Department) departmentComboBox.getSelectedItem();
+        if (selectedDept != null) {
+            config.setDepartment(selectedDept);
+            ApplicationState.getInstance().setCurrentDepartment(selectedDept);
+        }
+
         config.save();
 
         JOptionPane.showMessageDialog(this,
@@ -187,6 +226,7 @@ public class SettingsPanel extends JPanel {
         storeAddressField.setText("123 Main Street");
         receiptFolderField.setText("receipts");
         darkModeCheckBox.setSelected(false);
+        departmentComboBox.setSelectedItem(Department.DELI);
     }
 
     /**
@@ -196,6 +236,7 @@ public class SettingsPanel extends JPanel {
         setBackground(ThemeManager.getInstance().getBackgroundColor());
         darkModeCheckBox.setBackground(ThemeManager.getInstance().getBackgroundColor());
         darkModeCheckBox.setForeground(ThemeManager.getInstance().getTextColor());
+        departmentComboBox.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         revalidate();
         repaint();
     }

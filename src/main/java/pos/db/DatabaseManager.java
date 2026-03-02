@@ -102,10 +102,19 @@ public class DatabaseManager {
                     product_name TEXT NOT NULL,
                     product_cpu TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
+                    weight REAL DEFAULT 0,
                     unit_price REAL NOT NULL,
                     FOREIGN KEY (transaction_id) REFERENCES transactions(id)
                 )
                 """;
+            stmt.execute(createTransactionItemsTable);
+
+            // Add weight column if it doesn't exist (migration for existing databases)
+            try {
+                conn.createStatement().execute("ALTER TABLE transaction_items ADD COLUMN weight REAL DEFAULT 0");
+            } catch (SQLException e) {
+                // Column already exists, ignore the error
+            }
             stmt.execute(createTransactionItemsTable);
 
             Logger.info("Database schema initialized successfully");

@@ -2,6 +2,7 @@ package pos.ui.panels;
 
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
+import pos.model.Department;
 import pos.model.Product;
 import pos.ui.components.ProductCard;
 
@@ -15,7 +16,7 @@ import java.util.List;
 /**
  * Panel that displays the product catalog in a scrollable grid.
  */
-public class ProductsPanel extends JPanel {
+public class ProductsPanel extends JPanel implements ApplicationState.StateChangeListener {
     private final JPanel productsGrid;
     private final JTextField searchField = new JTextField();
     private List<ProductCard> productCards;
@@ -41,6 +42,9 @@ public class ProductsPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
         add(scrollPane, BorderLayout.CENTER);
+
+        // Register for state changes
+        ApplicationState.getInstance().addStateChangeListener(this);
 
         // Load products
         loadProducts();
@@ -129,6 +133,14 @@ public class ProductsPanel extends JPanel {
     }
 
     /**
+     * Reloads products from the current department.
+     */
+    public void reloadProducts() {
+        clearSearch();
+        loadProducts();
+    }
+
+    /**
      * Refreshes the products from the database.
      */
     public void refreshProducts() {
@@ -149,6 +161,20 @@ public class ProductsPanel extends JPanel {
      */
     public void focusSearch() {
         searchField.requestFocusInWindow();
+    }
+
+    @Override
+    public void onDepartmentChanged(Department department) {
+        SwingUtilities.invokeLater(() -> {
+            reloadProducts();
+        });
+    }
+
+    @Override
+    public void onProductsChanged(List<Product> products) {
+        SwingUtilities.invokeLater(() -> {
+            reloadProducts();
+        });
     }
 
     /**

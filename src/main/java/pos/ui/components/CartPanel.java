@@ -3,6 +3,7 @@ package pos.ui.components;
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
 import pos.model.CartItem;
+import pos.util.IconManager;
 import pos.util.Utility;
 
 import javax.swing.*;
@@ -12,14 +13,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A panel that displays the current shopping cart.
+ * A panel that displays the current shopping cart with item cards.
+ * Each item card shows the product name, weight, quantity, and total.
  */
 public class CartPanel extends JPanel {
-    private final DefaultListModel<String> cartModel = new DefaultListModel<>();
-    private final JList<String> cartList = new JList<>(cartModel);
-    private final JLabel totalLabel = new JLabel("$0.00");
-    private final JLabel itemCountLabel = new JLabel("0 items");
+    private final JPanel itemsContainer;
+    private final JLabel totalLabel;
+    private final JLabel itemCountLabel;
     private final List<CartUpdateListener> listeners = new ArrayList<>();
+    private final List<CartItemCard> itemCards = new ArrayList<>();
 
     public CartPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -30,9 +32,18 @@ public class CartPanel extends JPanel {
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        // Cart list
-        JPanel listPanel = createListPanel();
-        add(listPanel, BorderLayout.CENTER);
+        // Items container with scroll
+        itemsContainer = new JPanel();
+        itemsContainer.setLayout(new BoxLayout(itemsContainer, BoxLayout.Y_AXIS));
+        itemsContainer.setBackground(ThemeManager.getInstance().getBackgroundColor());
+
+        JScrollPane scrollPane = new JScrollPane(itemsContainer);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        add(scrollPane, BorderLayout.CENTER);
 
         // Footer with total
         JPanel footerPanel = createFooterPanel();
@@ -47,49 +58,15 @@ public class CartPanel extends JPanel {
                 new EmptyBorder(10, 15, 10, 15)
         ));
 
-        JLabel titleLabel = new JLabel("Shopping Cart");
+        JLabel titleLabel = new JLabel("Cart");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(titleLabel, BorderLayout.WEST);
 
+        itemCountLabel = new JLabel("0 items");
         itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         itemCountLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         panel.add(itemCountLabel, BorderLayout.EAST);
-
-        return panel;
-    }
-
-    private JPanel createListPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-
-        cartList.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        cartList.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        cartList.setForeground(ThemeManager.getInstance().getTextColor());
-        cartList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        cartList.setFixedCellHeight(30);
-
-        JScrollPane scrollPane = new JScrollPane(cartList);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(BorderFactory.createLineBorder(
-                ThemeManager.getInstance().getSecondaryColor(), 1, true));
-
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Remove button
-        JButton removeButton = new JButton("Remove Selected");
-        removeButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        removeButton.setBackground(ThemeManager.getInstance().getOrangeColor());
-        removeButton.setForeground(Color.WHITE);
-        removeButton.setFocusable(false);
-        removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        removeButton.addActionListener(e -> removeSelectedItem());
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        buttonPanel.add(removeButton);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -107,6 +84,7 @@ public class CartPanel extends JPanel {
         totalTextLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(totalTextLabel, BorderLayout.WEST);
 
+        totalLabel = new JLabel("$0.00");
         totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         totalLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
         panel.add(totalLabel, BorderLayout.EAST);
@@ -118,20 +96,26 @@ public class CartPanel extends JPanel {
      * Updates the cart display.
      */
     public void updateCart() {
-        cartModel.clear();
+        itemsContainer.removeAll();
+        itemCards.clear();
+
         List<CartItem> items = ApplicationState.getInstance().getCart().getItems();
 
-        for (CartItem item : items) {
-            String display = String.format("%s x %s @ %s = %s",
-                    item.getDisplayName(),
-                    Utility.formatQuantity(item.getQuantity()),
-                    Utility.formatPrice(item.getUnitPrice()),
-                    Utility.formatPrice(item.getTotalPrice()));
-            cartModel.addElement(display);
+        for (int i = 0; i < items.size(); i++) {
+            CartItemCard card = new CartItemCard(items.get(i), i);
+            itemCards.add(card);
+            itemsContainer.add(card);
+            itemsContainer.add(Box.createVerticalStrut(5));
         }
+
+        // Add glue to push items to top
+        itemsContainer.add(Box.createVerticalGlue());
 
         updateTotal();
         notifyListeners();
+
+        itemsContainer.revalidate();
+        itemsContainer.repaint();
     }
 
     private void updateTotal() {
@@ -142,36 +126,25 @@ public class CartPanel extends JPanel {
         itemCountLabel.setText(itemCount + " item" + (itemCount != 1 ? "s" : ""));
     }
 
-    private void removeSelectedItem() {
-        int selectedIndex = cartList.getSelectedIndex();
-        if (selectedIndex >= 0) {
-            ApplicationState.getInstance().getCart().removeItem(selectedIndex);
-            updateCart();
-        }
-    }
-
     /**
      * Clears the cart display.
      */
     public void clearCart() {
-        cartModel.clear();
+        itemsContainer.removeAll();
+        itemCards.clear();
         totalLabel.setText("$0.00");
         itemCountLabel.setText("0 items");
     }
 
     /**
-     * Gets the selected cart item index.
-     *
-     * @return The selected index, or -1 if none selected
+     * Gets the selected cart item index (for compatibility, returns -1).
      */
     public int getSelectedIndex() {
-        return cartList.getSelectedIndex();
+        return -1; // No single selection in new design
     }
 
     /**
      * Adds a listener for cart updates.
-     *
-     * @param listener The listener to add
      */
     public void addCartUpdateListener(CartUpdateListener listener) {
         listeners.add(listener);
@@ -188,13 +161,14 @@ public class CartPanel extends JPanel {
      */
     public void updateTheme() {
         setBackground(ThemeManager.getInstance().getBackgroundColor());
-        cartList.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        cartList.setForeground(ThemeManager.getInstance().getTextColor());
+        itemsContainer.setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        // Update all components
-        for (Component comp : getComponents()) {
-            SwingUtilities.updateComponentTreeUI(comp);
+        for (CartItemCard card : itemCards) {
+            card.updateTheme();
         }
+
+        revalidate();
+        repaint();
     }
 
     /**
@@ -202,5 +176,106 @@ public class CartPanel extends JPanel {
      */
     public interface CartUpdateListener {
         void onCartUpdated();
+    }
+
+    /**
+     * A card component representing a single cart item.
+     */
+    private class CartItemCard extends JPanel {
+        private final CartItem item;
+        private final int index;
+
+        public CartItemCard(CartItem item, int index) {
+            this.item = item;
+            this.index = index;
+            initialize();
+        }
+
+        private void initialize() {
+            setLayout(new BorderLayout(10, 5));
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getInstance().getSecondaryColor(), 1, true),
+                    new EmptyBorder(10, 12, 10, 8)
+            ));
+            setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+
+            // Left: Product info
+            JPanel infoPanel = new JPanel();
+            infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+            infoPanel.setOpaque(false);
+
+            JLabel nameLabel = new JLabel(item.getDisplayName());
+            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
+            infoPanel.add(nameLabel);
+
+            if (item.isWeighedItem()) {
+                JLabel detailsLabel = new JLabel(String.format("%.0f x %.2f lb @ %s/lb",
+                        item.getQuantity(),
+                        item.getWeight(),
+                        Utility.formatPrice(item.getUnitPrice())));
+                detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                detailsLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
+                infoPanel.add(detailsLabel);
+            } else {
+                JLabel detailsLabel = new JLabel(String.format("%.0f @ %s",
+                        item.getQuantity(),
+                        Utility.formatPrice(item.getUnitPrice())));
+                detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                detailsLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
+                infoPanel.add(detailsLabel);
+            }
+
+            add(infoPanel, BorderLayout.CENTER);
+
+            // Right: Total and remove button
+            JPanel rightPanel = new JPanel(new BorderLayout(5, 0));
+            rightPanel.setOpaque(false);
+
+            JLabel totalLabel = new JLabel(Utility.formatPrice(item.getTotalPrice()));
+            totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            totalLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
+            rightPanel.add(totalLabel, BorderLayout.CENTER);
+
+            JButton removeButton = new JButton();
+            removeButton.setIcon(IconManager.getInstance().getIcon(IconManager.DELETE, 16, 16));
+            removeButton.setToolTipText("Remove item");
+            removeButton.setPreferredSize(new Dimension(28, 28));
+            removeButton.setFocusable(false);
+            removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            removeButton.setBackground(ThemeManager.getInstance().getOrangeColor());
+            removeButton.setOpaque(true);
+            removeButton.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+            removeButton.addActionListener(e -> removeItem());
+
+            // Style the button
+            removeButton.getModel().addChangeListener(e -> {
+                if (removeButton.getModel().isRollover()) {
+                    removeButton.setBackground(new Color(220, 80, 60));
+                } else {
+                    removeButton.setBackground(ThemeManager.getInstance().getOrangeColor());
+                }
+            });
+
+            rightPanel.add(removeButton, BorderLayout.EAST);
+
+            add(rightPanel, BorderLayout.EAST);
+        }
+
+        private void removeItem() {
+            ApplicationState.getInstance().getCart().removeItem(index);
+            updateCart();
+        }
+
+        public void updateTheme() {
+            setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getInstance().getSecondaryColor(), 1, true),
+                    new EmptyBorder(10, 12, 10, 8)
+            ));
+            revalidate();
+            repaint();
+        }
     }
 }
