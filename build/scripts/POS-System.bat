@@ -68,7 +68,7 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\POS-System-1.0.0.jar;%APP_HOME%\lib\flatlaf-extras-3.4.jar;%APP_HOME%\lib\flatlaf-3.4.jar;%APP_HOME%\lib\sqlite-jdbc-3.45.1.0.jar;%APP_HOME%\lib\slf4j-simple-2.0.9.jar;%APP_HOME%\lib\jsvg-1.2.0.jar;%APP_HOME%\lib\slf4j-api-2.0.9.jar
+set CLASSPATH=%APP_HOME%\lib\POS-System-1.0.0.jar;%APP_HOME%\lib\flatlaf-extras-3.4.jar;%APP_HOME%\lib\flatlaf-3.4.jar;%APP_HOME%\lib\sqlite-jdbc-3.45.1.0.jar;%APP_HOME%\lib\slf4j-simple-2.0.9.jar;%APP_HOME%\lib\pdfbox-2.0.30.jar;%APP_HOME%\lib\jsvg-1.2.0.jar;%APP_HOME%\lib\slf4j-api-2.0.9.jar;%APP_HOME%\lib\fontbox-2.0.30.jar;%APP_HOME%\lib\commons-logging-1.2.jar
 
 
 @rem Execute POS-System

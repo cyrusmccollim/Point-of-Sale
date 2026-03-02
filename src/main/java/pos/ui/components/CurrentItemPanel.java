@@ -5,6 +5,7 @@ import pos.app.ThemeManager;
 import pos.model.Department;
 import pos.model.PendingCartItem;
 import pos.model.Product;
+import pos.util.UIFactory;
 import pos.util.Utility;
 
 import javax.swing.*;
@@ -13,19 +14,13 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/**
- * Panel displaying the current item being worked on and cart total.
- * Shows price per unit, quantity, weight, and total for the pending item.
- * QTY and WT fields are clickable to select input mode.
- */
 public class CurrentItemPanel extends JPanel implements ApplicationState.StateChangeListener {
-    private JLabel pricePerLbLabel;
+    private JLabel pricePerLbInlineLabel;
     private JLabel qtyValueLabel;
     private JLabel weightValueLabel;
     private JLabel itemTotalLabel;
     private JLabel productNameLabel;
-    private JLabel cartTotalLabel;
-    private JLabel departmentLabel;
+    private JLabel departmentBadge;
 
     private JPanel qtyPanel;
     private JPanel weightPanel;
@@ -33,272 +28,184 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     private boolean weightSelected = false;
 
     public CurrentItemPanel() {
-        setLayout(new BorderLayout(10, 5));
-        setBorder(new EmptyBorder(10, 15, 10, 15));
+        initialize();
+    }
+
+    private void initialize() {
+        setLayout(new BorderLayout(6, 4));
+        setBorder(new EmptyBorder(8, 14, 8, 14));
         setBackground(ThemeManager.getInstance().getOrangeColor());
 
-        // Top row: Department and Cart Total
+        // Top row: department badge
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
 
-        departmentLabel = new JLabel("Deli");
-        departmentLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        departmentLabel.setForeground(Color.WHITE);
-        topRow.add(departmentLabel, BorderLayout.WEST);
-
-        cartTotalLabel = new JLabel("Cart: $0.00");
-        cartTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        cartTotalLabel.setForeground(Color.WHITE);
-        topRow.add(cartTotalLabel, BorderLayout.EAST);
-
+        departmentBadge = UIFactory.createBadge("Deli", new Color(0, 0, 0, 60), Color.WHITE);
+        topRow.add(departmentBadge, BorderLayout.WEST);
         add(topRow, BorderLayout.NORTH);
 
-        // Center: Product name (prominent)
-        productNameLabel = new JLabel("Select a product to begin", SwingConstants.CENTER);
-        productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        productNameLabel.setForeground(Color.WHITE);
-        add(productNameLabel, BorderLayout.CENTER);
+        // Center: product name + price/lb inline
+        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 0, 1));
+        centerPanel.setOpaque(false);
 
-        // Bottom: Metrics grid with clickable QTY and WT
-        JPanel metricsPanel = new JPanel(new GridLayout(1, 4, 15, 0));
+        productNameLabel = new JLabel("Select a product", SwingConstants.CENTER);
+        productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        productNameLabel.setForeground(Color.WHITE);
+        centerPanel.add(productNameLabel);
+
+        pricePerLbInlineLabel = new JLabel("", SwingConstants.CENTER);
+        pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        pricePerLbInlineLabel.setForeground(new Color(255, 255, 255, 200));
+        centerPanel.add(pricePerLbInlineLabel);
+
+        add(centerPanel, BorderLayout.CENTER);
+
+        // Bottom: 3-metric row (QTY, WT, TOTAL)
+        JPanel metricsPanel = new JPanel(new GridLayout(1, 3, 8, 0));
         metricsPanel.setOpaque(false);
 
-        pricePerLbLabel = createMetricValue();
-        qtyValueLabel = createMetricValue();
+        qtyValueLabel    = createMetricValue();
         weightValueLabel = createMetricValue();
-        itemTotalLabel = createMetricValue();
+        itemTotalLabel   = createMetricValue();
 
-        metricsPanel.add(createStaticMetricPanel("Price/lb", pricePerLbLabel));
-        metricsPanel.add(createClickableMetricPanel("QTY", qtyValueLabel, () -> selectQty()));
-        metricsPanel.add(createClickableMetricPanel("WT (lb)", weightValueLabel, () -> selectWeight()));
-        metricsPanel.add(createStaticMetricPanel("TOTAL", itemTotalLabel));
+        qtyPanel    = createMetricPanel("QTY", qtyValueLabel, true);
+        weightPanel = createMetricPanel("WT (lb)", weightValueLabel, true);
+        JPanel totalPanel = createMetricPanel("TOTAL", itemTotalLabel, false);
 
+        metricsPanel.add(qtyPanel);
+        metricsPanel.add(weightPanel);
+        metricsPanel.add(totalPanel);
         add(metricsPanel, BorderLayout.SOUTH);
 
-        // Register for state changes
         ApplicationState.getInstance().addStateChangeListener(this);
-
-        // Initial update
         updateDepartment();
-        updateCartTotal();
     }
 
     private JLabel createMetricValue() {
         JLabel label = new JLabel("--", SwingConstants.CENTER);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        label.setFont(new Font("Segoe UI", Font.BOLD, 18));
         label.setForeground(Color.WHITE);
         return label;
     }
 
-    private JPanel createStaticMetricPanel(String name, JLabel valueLabel) {
-        JPanel panel = new JPanel(new BorderLayout(5, 3));
+    private JPanel createMetricPanel(String name, JLabel valueLabel, boolean clickable) {
+        JPanel panel = new JPanel(new BorderLayout(0, 2)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                boolean sel = isSelectedPanel(this);
+                float alpha = sel ? 0.25f : 0.15f;
+                g2.setColor(new Color(1f, 1f, 1f, alpha));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                if (sel) {
+                    g2.setColor(new Color(1f, 1f, 1f, 0.65f));
+                    g2.setStroke(new BasicStroke(1.5f));
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                }
+                g2.dispose();
+            }
+        };
         panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(3, 8, 3, 8));
 
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        nameLabel.setForeground(new Color(255, 255, 255, 180));
+        nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 10));
+        nameLabel.setForeground(new Color(255, 255, 255, 153));
 
+        panel.add(nameLabel, BorderLayout.NORTH);
         panel.add(valueLabel, BorderLayout.CENTER);
-        panel.add(nameLabel, BorderLayout.SOUTH);
 
+        if (clickable) {
+            panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            panel.addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent e) {
+                    if (panel == qtyPanel) selectQty();
+                    else if (panel == weightPanel) selectWeight();
+                }
+                @Override public void mouseEntered(MouseEvent e) { panel.repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { panel.repaint(); }
+            });
+        }
         return panel;
     }
 
-    private JPanel createClickableMetricPanel(String name, JLabel valueLabel, Runnable onClick) {
-        JPanel panel = new JPanel(new BorderLayout(5, 3));
-        panel.setOpaque(false);
-        panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        nameLabel.setForeground(new Color(255, 255, 255, 200));
-
-        panel.add(valueLabel, BorderLayout.CENTER);
-        panel.add(nameLabel, BorderLayout.SOUTH);
-
-        // Store reference for selection state
-        if (name.equals("QTY")) {
-            qtyPanel = panel;
-        } else if (name.equals("WT (lb)")) {
-            weightPanel = panel;
-        }
-
-        panel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                onClick.run();
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                panel.setBackground(new Color(255, 255, 255, 30));
-                panel.setOpaque(true);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if ((name.equals("QTY") && !qtySelected) || (name.equals("WT (lb)") && !weightSelected)) {
-                    panel.setOpaque(false);
-                }
-            }
-        });
-
-        return panel;
+    private boolean isSelectedPanel(JPanel p) {
+        return (p == qtyPanel && qtySelected) || (p == weightPanel && weightSelected);
     }
 
     private void selectQty() {
         qtySelected = true;
         weightSelected = false;
-        updateSelectionVisuals();
+        qtyPanel.repaint();
+        weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.QUANTITY);
-        notifyModeSelected("QUANTITY");
     }
 
     private void selectWeight() {
         qtySelected = false;
         weightSelected = true;
-        updateSelectionVisuals();
+        qtyPanel.repaint();
+        weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.WEIGHT);
-        notifyModeSelected("WEIGHT");
     }
 
-    private void updateSelectionVisuals() {
-        // QTY panel
-        if (qtyPanel != null) {
-            if (qtySelected) {
-                qtyPanel.setBackground(new Color(255, 255, 255, 60));
-                qtyPanel.setOpaque(true);
-            } else {
-                qtyPanel.setOpaque(false);
-            }
-        }
-
-        // Weight panel
-        if (weightPanel != null) {
-            if (weightSelected) {
-                weightPanel.setBackground(new Color(255, 255, 255, 60));
-                weightPanel.setOpaque(true);
-            } else {
-                weightPanel.setOpaque(false);
-            }
-        }
-    }
-
-    private void notifyModeSelected(String mode) {
-        // This could be used to update the number pad display
-    }
-
-    /**
-     * Updates the display with the current pending item.
-     */
     public void updatePendingItem(PendingCartItem item) {
         if (item == null) {
-            pricePerLbLabel.setText("--");
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");
             itemTotalLabel.setText("$0.00");
-            productNameLabel.setText("Select a product to begin");
-            productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+            productNameLabel.setText("Select a product");
+            productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            pricePerLbInlineLabel.setText("");
             qtySelected = false;
             weightSelected = false;
-            updateSelectionVisuals();
+            if (qtyPanel != null) { qtyPanel.repaint(); weightPanel.repaint(); }
         } else {
             Product product = item.getProduct();
-            pricePerLbLabel.setText(Utility.formatPrice(product.getPrice()));
             qtyValueLabel.setText(String.format("%.0f", item.getQuantity()));
             weightValueLabel.setText(String.format("%.2f", item.getWeight()));
             itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
             productNameLabel.setText(product.getName());
-            productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+            productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            pricePerLbInlineLabel.setText("@ " + Utility.formatPrice(product.getPrice()) + " /lb");
 
-            // Auto-select weight mode when a new product is selected
-            if (item.getWeight() == 0) {
-                selectWeight();
-            }
+            if (item.getWeight() == 0) selectWeight();
         }
+        revalidate();
+        repaint();
     }
 
-    /**
-     * Updates the quantity display.
-     */
     public void updateQuantity(double quantity) {
         qtyValueLabel.setText(String.format("%.0f", quantity));
     }
 
-    /**
-     * Updates the weight display.
-     */
     public void updateWeight(double weight) {
         weightValueLabel.setText(String.format("%.2f", weight));
-
-        // Also update item total if we have a pending item
         PendingCartItem item = ApplicationState.getInstance().getPendingItem();
-        if (item != null) {
-            itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
-        }
+        if (item != null) itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
     }
 
-    /**
-     * Updates the cart total display.
-     */
-    public void updateCartTotal() {
-        double total = ApplicationState.getInstance().getCart().getTotal();
-        cartTotalLabel.setText("Cart: " + Utility.formatPrice(total));
-    }
-
-    /**
-     * Updates the department display.
-     */
     public void updateDepartment() {
         Department dept = ApplicationState.getInstance().getCurrentDepartment();
-        departmentLabel.setText(dept.getDisplayName());
+        departmentBadge.setText(dept.getDisplayName());
     }
 
-    /**
-     * Clears the display.
-     */
     public void clearDisplay() {
-        pricePerLbLabel.setText("--");
-        qtyValueLabel.setText("--");
-        weightValueLabel.setText("--");
-        itemTotalLabel.setText("$0.00");
-        productNameLabel.setText("Select a product to begin");
-        productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-        qtySelected = false;
-        weightSelected = false;
-        updateSelectionVisuals();
+        updatePendingItem(null);
     }
 
-    /**
-     * Gets whether quantity mode is selected.
-     */
-    public boolean isQtySelected() {
-        return qtySelected;
-    }
+    public boolean isQtySelected()    { return qtySelected; }
+    public boolean isWeightSelected() { return weightSelected; }
 
-    /**
-     * Gets whether weight mode is selected.
-     */
-    public boolean isWeightSelected() {
-        return weightSelected;
-    }
-
-    @Override
-    public void onPendingItemChanged(PendingCartItem item) {
+    @Override public void onPendingItemChanged(PendingCartItem item) {
         SwingUtilities.invokeLater(() -> updatePendingItem(item));
     }
 
-    @Override
-    public void onDepartmentChanged(Department department) {
-        SwingUtilities.invokeLater(() -> {
-            updateDepartment();
-            clearDisplay();
-        });
+    @Override public void onDepartmentChanged(Department department) {
+        SwingUtilities.invokeLater(() -> { updateDepartment(); clearDisplay(); });
     }
 
-    /**
-     * Updates the panel's theme colors.
-     */
     public void updateTheme() {
         setBackground(ThemeManager.getInstance().getOrangeColor());
         revalidate();

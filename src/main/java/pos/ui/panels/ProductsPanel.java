@@ -5,191 +5,134 @@ import pos.app.ThemeManager;
 import pos.model.Department;
 import pos.model.Product;
 import pos.ui.components.ProductCard;
+import pos.util.IconManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Panel that displays the product catalog in a scrollable grid.
- */
 public class ProductsPanel extends JPanel implements ApplicationState.StateChangeListener {
     private final JPanel productsGrid;
     private final JTextField searchField = new JTextField();
     private List<ProductCard> productCards;
 
     public ProductsPanel() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setLayout(new BorderLayout(0, 0));
+        setBorder(new EmptyBorder(8, 8, 8, 8));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        // Search panel
-        JPanel searchPanel = createSearchPanel();
-        add(searchPanel, BorderLayout.NORTH);
+        add(createSearchPanel(), BorderLayout.NORTH);
 
-        // Products grid
-        productsGrid = new JPanel(new GridLayout(0, 4, 15, 15));
+        productsGrid = new JPanel(new GridLayout(0, 4, 10, 10));
         productsGrid.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        productsGrid.setBorder(new EmptyBorder(10, 10, 10, 10));
+        productsGrid.setBorder(new EmptyBorder(8, 0, 0, 0));
 
         JScrollPane scrollPane = new JScrollPane(productsGrid);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-
         add(scrollPane, BorderLayout.CENTER);
 
-        // Register for state changes
         ApplicationState.getInstance().addStateChangeListener(this);
-
-        // Load products
         loadProducts();
     }
 
     private JPanel createSearchPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInstance().getSecondaryColor(), 1, true),
-                new EmptyBorder(10, 15, 10, 15)
-        ));
+        panel.setBorder(new MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()));
 
-        JLabel searchLabel = new JLabel("Search:");
-        searchLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchLabel.setForeground(ThemeManager.getInstance().getTextColor());
-        panel.add(searchLabel, BorderLayout.WEST);
+        // Inner padding panel
+        JPanel inner = new JPanel(new BorderLayout(8, 0));
+        inner.setOpaque(false);
+        inner.setBorder(new EmptyBorder(6, 8, 6, 8));
 
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchField.setBackground(ThemeManager.getInstance().getBackgroundColor());
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        searchField.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         searchField.setForeground(ThemeManager.getInstance().getTextColor());
-        searchField.setBorder(new EmptyBorder(5, 10, 5, 10));
-        searchField.setToolTipText("Search products by name or CPU code");
+        searchField.setBorder(new EmptyBorder(4, 4, 4, 4));
+        searchField.setPreferredSize(new Dimension(0, 40));
+        searchField.setToolTipText("Search products by name or CPU code (Ctrl+F)");
+        searchField.putClientProperty("JTextField.placeholderText", "Search products…");
+        searchField.putClientProperty("JTextField.leadingIcon",
+                IconManager.getInstance().getIcon(IconManager.SEARCH, 16, 16));
 
-        // Add search listener
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                filterProducts();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                filterProducts();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                filterProducts();
-            }
+            @Override public void insertUpdate(DocumentEvent e)  { filterProducts(); }
+            @Override public void removeUpdate(DocumentEvent e)  { filterProducts(); }
+            @Override public void changedUpdate(DocumentEvent e) { filterProducts(); }
         });
 
-        panel.add(searchField, BorderLayout.CENTER);
-
-        // Keyboard shortcut hint
-        JLabel hintLabel = new JLabel("(Ctrl+F)");
-        hintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        hintLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
-        panel.add(hintLabel, BorderLayout.EAST);
-
+        inner.add(searchField, BorderLayout.CENTER);
+        panel.add(inner, BorderLayout.CENTER);
         return panel;
     }
 
     private void loadProducts() {
         productsGrid.removeAll();
         productCards = new java.util.ArrayList<>();
-
-        List<Product> products = ApplicationState.getInstance().getProducts();
-
-        for (Product product : products) {
-            ProductCard card = new ProductCard(product);
+        for (Product p : ApplicationState.getInstance().getProducts()) {
+            ProductCard card = new ProductCard(p);
             productsGrid.add(card);
             productCards.add(card);
         }
-
         productsGrid.revalidate();
         productsGrid.repaint();
     }
 
     private void filterProducts() {
-        String query = searchField.getText().trim().toLowerCase();
-
+        String q = searchField.getText().trim().toLowerCase();
+        productsGrid.removeAll();
         for (ProductCard card : productCards) {
-            if (query.isEmpty()) {
-                card.setVisible(true);
-            } else {
-                Product product = card.getProduct();
-                boolean matches = product.getName().toLowerCase().contains(query) ||
-                        product.getCpu().toLowerCase().contains(query);
-                card.setVisible(matches);
+            Product p = card.getProduct();
+            if (q.isEmpty() || p.getName().toLowerCase().contains(q)
+                    || p.getCpu().toLowerCase().contains(q)) {
+                productsGrid.add(card);
             }
         }
-
         productsGrid.revalidate();
         productsGrid.repaint();
     }
 
-    /**
-     * Reloads products from the current department.
-     */
     public void reloadProducts() {
-        clearSearch();
+        searchField.setText("");
         loadProducts();
     }
 
-    /**
-     * Refreshes the products from the database.
-     */
     public void refreshProducts() {
         ApplicationState.getInstance().initialize();
         loadProducts();
     }
 
-    /**
-     * Clears the search field and shows all products.
-     */
     public void clearSearch() {
         searchField.setText("");
-        filterProducts();
+        productsGrid.removeAll();
+        for (ProductCard card : productCards) productsGrid.add(card);
+        productsGrid.revalidate();
+        productsGrid.repaint();
     }
 
-    /**
-     * Focuses the search field.
-     */
-    public void focusSearch() {
-        searchField.requestFocusInWindow();
+    public void focusSearch() { searchField.requestFocusInWindow(); }
+
+    @Override public void onDepartmentChanged(Department department) {
+        SwingUtilities.invokeLater(this::reloadProducts);
+    }
+    @Override public void onProductsChanged(List<Product> products) {
+        SwingUtilities.invokeLater(this::reloadProducts);
     }
 
-    @Override
-    public void onDepartmentChanged(Department department) {
-        SwingUtilities.invokeLater(() -> {
-            reloadProducts();
-        });
-    }
-
-    @Override
-    public void onProductsChanged(List<Product> products) {
-        SwingUtilities.invokeLater(() -> {
-            reloadProducts();
-        });
-    }
-
-    /**
-     * Updates the panel's theme colors.
-     */
     public void updateTheme() {
-        setBackground(ThemeManager.getInstance().getBackgroundColor());
-        productsGrid.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        searchField.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        searchField.setForeground(ThemeManager.getInstance().getTextColor());
-
-        for (ProductCard card : productCards) {
-            card.updateTheme();
-        }
-
+        ThemeManager tm = ThemeManager.getInstance();
+        setBackground(tm.getBackgroundColor());
+        productsGrid.setBackground(tm.getBackgroundColor());
+        searchField.setBackground(tm.getPanelBackgroundColor());
+        searchField.setForeground(tm.getTextColor());
+        for (ProductCard card : productCards) card.updateTheme();
         revalidate();
         repaint();
     }

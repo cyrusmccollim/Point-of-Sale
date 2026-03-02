@@ -4,6 +4,7 @@ import pos.model.Transaction;
 import pos.model.TransactionItem;
 import pos.util.Config;
 import pos.util.Logger;
+import pos.util.PdfReceiptGenerator;
 import pos.util.Utility;
 
 import java.io.File;
@@ -206,6 +207,27 @@ public class TransactionDAO {
             Logger.error("Failed to save receipt file", e);
             return null;
         }
+    }
+
+    /**
+     * Saves a receipt as PDF.
+     *
+     * @param transaction The transaction
+     * @param storeName The store name
+     * @param storeAddress The store address
+     * @return The file path of the saved PDF receipt
+     */
+    public String saveReceiptPdf(Transaction transaction, String storeName, String storeAddress) {
+        String receiptFolder = Config.getInstance().getReceiptFolder();
+        dbManager.ensureReceiptsDirectory();
+
+        String filename = "receipt_" + transaction.getId() + "_" + Utility.getTimestampFilename() + ".pdf";
+        String filepath = receiptFolder + File.separator + filename;
+
+        if (PdfReceiptGenerator.generateReceipt(transaction, storeName, storeAddress, filepath)) {
+            return filepath;
+        }
+        return null;
     }
 
     /**

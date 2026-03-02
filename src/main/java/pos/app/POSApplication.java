@@ -4,9 +4,10 @@ import pos.db.DatabaseManager;
 import pos.db.TransactionDAO;
 import pos.model.Cart;
 import pos.model.PendingCartItem;
+import pos.model.Product;
 import pos.model.Transaction;
 import pos.model.TransactionItem;
-import pos.ui.components.CartPanel;
+import pos.ui.components.CartSummaryPanel;
 import pos.ui.components.CurrentItemPanel;
 import pos.ui.components.NumberPad;
 import pos.ui.dialogs.ConfirmationDialog;
@@ -18,6 +19,7 @@ import pos.ui.panels.SettingsPanel;
 import pos.util.Config;
 import pos.util.IconManager;
 import pos.util.Logger;
+import pos.util.Utility;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -28,20 +30,19 @@ import java.util.List;
 
 /**
  * Main application window for the POS System.
+ * Fixed window size at half of screen dimensions.
  */
-public class POSApplication extends JFrame {
+public class POSApplication extends JFrame implements ApplicationState.StateChangeListener {
     private static POSApplication instance;
 
-    // Panels
     private ProductsPanel productsPanel;
-    private CartPanel cartPanel;
+    private CartSummaryPanel cartSummaryPanel;
     private CheckoutPanel checkoutPanel;
     private HistoryPanel historyPanel;
     private SettingsPanel settingsPanel;
     private CurrentItemPanel currentItemPanel;
     private NumberPad numberPad;
 
-    // Navigation
     private JPanel mainContent;
     private CardLayout cardLayout;
     private static final String PRODUCTS_VIEW = "PRODUCTS";
@@ -49,12 +50,8 @@ public class POSApplication extends JFrame {
     private static final String HISTORY_VIEW = "HISTORY";
     private static final String SETTINGS_VIEW = "SETTINGS";
 
-    // Current view
     private String currentView = PRODUCTS_VIEW;
 
-    /**
-     * Gets the singleton instance of the application.
-     */
     public static POSApplication getInstance() {
         return instance;
     }
@@ -65,29 +62,16 @@ public class POSApplication extends JFrame {
     }
 
     private void initialize() {
-        // Initialize database
         DatabaseManager.getInstance().initializeSchema();
         DatabaseManager.getInstance().ensureReceiptsDirectory();
-
-        // Initialize application state
         ApplicationState.getInstance().initialize();
-
-        // Apply theme
         ThemeManager.getInstance().applyTheme();
 
-        // Configure window
         configureWindow();
-
-        // Create components
         createComponents();
-
-        // Layout
         layoutComponents();
-
-        // Register listeners
         registerListeners();
-
-        // Set default view
+        ApplicationState.getInstance().addStateChangeListener(this);
         showProductsView();
 
         Logger.info("POS Application initialized successfully");
@@ -96,18 +80,17 @@ public class POSApplication extends JFrame {
     private void configureWindow() {
         setTitle(Config.getInstance().getStoreName() + " - POS System");
 
-        // Set window size to 75% of screen at 16:9 aspect ratio
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int height = (int) (screenSize.height * 0.75);
-        int width = (int) (height * 16.0 / 9.0);
 
-        setMinimumSize(new Dimension(1200, 800));
-        setPreferredSize(new Dimension(width, height));
-        setResizable(true);
+        // Fixed size: 3/4 of screen width and height
+        int windowWidth = (int) (screenSize.width * 0.75);
+        int windowHeight = (int) (screenSize.height * 0.75);
+
+        setSize(windowWidth, windowHeight);
+        setResizable(false);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Try to set window icon
         try {
             setIconImage(IconManager.getInstance().getImage(IconManager.POS, 64, 64));
         } catch (Exception e) {
@@ -116,22 +99,17 @@ public class POSApplication extends JFrame {
     }
 
     private void createComponents() {
-        // Create current item panel (new top panel)
         currentItemPanel = new CurrentItemPanel();
-
-        // Create main panels
         productsPanel = new ProductsPanel();
-        cartPanel = new CartPanel();
+        cartSummaryPanel = new CartSummaryPanel();
         checkoutPanel = new CheckoutPanel();
         historyPanel = new HistoryPanel();
         settingsPanel = new SettingsPanel();
-
-        // Create number pad
         numberPad = new NumberPad();
     }
 
     private void layoutComponents() {
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(0, 0));
 
         // Top: Current item panel
         add(currentItemPanel, BorderLayout.NORTH);
@@ -148,7 +126,7 @@ public class POSApplication extends JFrame {
 
         add(mainContent, BorderLayout.CENTER);
 
-        // Right: Number pad and cart
+        // Right: Number pad and cart (25% of width)
         JPanel rightPanel = createRightPanel();
         add(rightPanel, BorderLayout.EAST);
 
@@ -172,36 +150,36 @@ public class POSApplication extends JFrame {
     }
 
     private JPanel createRightPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        panel.setPreferredSize(new Dimension(350, 0));
+        panel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.setPreferredSize(new Dimension(320, 0));
 
-        // Cart panel
-        panel.add(cartPanel, BorderLayout.CENTER);
+        // Cart summary at top
+        panel.add(cartSummaryPanel, BorderLayout.NORTH);
 
-        // Number pad
-        panel.add(numberPad, BorderLayout.SOUTH);
+        // Number pad takes the rest
+        panel.add(numberPad, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JPanel createNavigationPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        panel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         String[] buttonLabels = {"Products", "Checkout", "History", "Settings"};
         String[] views = {PRODUCTS_VIEW, CHECKOUT_VIEW, HISTORY_VIEW, SETTINGS_VIEW};
 
         for (int i = 0; i < buttonLabels.length; i++) {
             JButton button = new JButton(buttonLabels[i]);
-            button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             button.setBackground(ThemeManager.getInstance().getSecondaryColor());
             button.setForeground(ThemeManager.getInstance().getTextColor());
             button.setFocusable(false);
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            button.setPreferredSize(new Dimension(120, 40));
+            button.setPreferredSize(new Dimension(120, 36));
 
             final String view = views[i];
             button.addActionListener(e -> switchView(view));
@@ -212,25 +190,21 @@ public class POSApplication extends JFrame {
     }
 
     private void registerListeners() {
-        // Number pad listener
         numberPad.addNumberPadListener(this::handleNumberPadAction);
-
-        // Cart update listener
-        cartPanel.addCartUpdateListener(this::handleCartUpdate);
-
-        // Keyboard shortcuts
         registerKeyboardShortcut();
     }
 
     private void registerKeyboardShortcut() {
-        // Ctrl+F for search
         getRootPane().registerKeyboardAction(e -> productsPanel.focusSearch(),
                 KeyStroke.getKeyStroke("ctrl F"),
                 JComponent.WHEN_IN_FOCUSED_WINDOW);
 
-        // Escape to clear input
         getRootPane().registerKeyboardAction(e -> clearInput(),
                 KeyStroke.getKeyStroke("ESCAPE"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        getRootPane().registerKeyboardAction(e -> handleConfirm(),
+                KeyStroke.getKeyStroke("ENTER"),
                 JComponent.WHEN_IN_FOCUSED_WINDOW);
     }
 
@@ -238,37 +212,16 @@ public class POSApplication extends JFrame {
         switch (key) {
             case NumberPad.CONFIRM -> handleConfirm();
             case NumberPad.DELETE -> handleDelete();
-            case NumberPad.SETTINGS -> switchView(SETTINGS_VIEW);
-            case NumberPad.QTY -> handleQtyMode();
-            case NumberPad.WT -> handleWtMode();
-            default -> {
-                // Numeric input - apply to current mode
-                handleNumericInput();
-            }
+            default -> updateCurrentItemDisplay();
         }
     }
 
-    private void handleQtyMode() {
-        // Already in quantity mode from NumberPad
-    }
-
-    private void handleWtMode() {
-        // Already in weight mode from NumberPad
-    }
-
-    private void handleNumericInput() {
+    private void updateCurrentItemDisplay() {
         ApplicationState state = ApplicationState.getInstance();
-        double inputValue = state.getCurrentInputAsDouble();
-
         if (state.hasPendingItem()) {
-            ApplicationState.InputMode mode = numberPad.getCurrentMode();
-            if (mode == ApplicationState.InputMode.QUANTITY) {
-                state.updatePendingQuantity(inputValue);
-                currentItemPanel.updateQuantity(inputValue);
-            } else if (mode == ApplicationState.InputMode.WEIGHT) {
-                state.updatePendingWeight(inputValue);
-                currentItemPanel.updateWeight(inputValue);
-            }
+            PendingCartItem item = state.getPendingItem();
+            currentItemPanel.updateQuantity(item.getQuantity());
+            currentItemPanel.updateWeight(item.getWeight());
         }
     }
 
@@ -276,21 +229,42 @@ public class POSApplication extends JFrame {
         ApplicationState state = ApplicationState.getInstance();
 
         if (state.hasPendingItem()) {
-            // Try to confirm the pending item
-            if (state.confirmPendingItem()) {
-                cartPanel.updateCart();
-                currentItemPanel.updateCartTotal();
-                currentItemPanel.clearDisplay();
-                numberPad.clearDisplay();
-                Logger.info("Item added to cart");
-            } else {
+            PendingCartItem pendingItem = state.getPendingItem();
+
+            if (pendingItem.getWeight() <= 0) {
                 JOptionPane.showMessageDialog(this,
-                        "Please enter a weight greater than 0 before confirming.",
+                        "Please click on 'WT (lb)' and enter a weight before adding to cart.",
                         "Weight Required",
                         JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            Product product = pendingItem.getProduct();
+            String message = String.format(
+                    "<html><div style='text-align: center;'>" +
+                            "<b>%s</b><br><br>" +
+                            "Quantity: %.0f<br>" +
+                            "Weight: %.2f lb<br>" +
+                            "Price: %s/lb<br><br>" +
+                            "<b>Item Total: %s</b>" +
+                            "</div></html>",
+                    product.getName(),
+                    pendingItem.getQuantity(),
+                    pendingItem.getWeight(),
+                    Utility.formatPrice(product.getPrice()),
+                    Utility.formatPrice(pendingItem.getTotalPrice())
+            );
+
+            boolean confirmed = ConfirmationDialog.confirm(this, "Add to Cart?", message);
+
+            if (confirmed) {
+                state.confirmPendingItem();
+                cartSummaryPanel.updateSummary();
+                currentItemPanel.clearDisplay();
+                numberPad.clearDisplay();
+                Logger.info("Added " + product.getName() + " to cart");
             }
         } else {
-            // No pending item - switch to checkout if we have items in cart
             if (currentView.equals(CHECKOUT_VIEW)) {
                 processCheckout();
             } else if (!state.getCart().isEmpty()) {
@@ -300,26 +274,18 @@ public class POSApplication extends JFrame {
     }
 
     private void handleDelete() {
-        // Delete from cart if item selected
-        int selectedIndex = cartPanel.getSelectedIndex();
-        if (selectedIndex >= 0) {
-            ApplicationState.getInstance().getCart().removeItem(selectedIndex);
-            cartPanel.updateCart();
-            currentItemPanel.updateCartTotal();
-        }
-    }
+        ApplicationState state = ApplicationState.getInstance();
 
-    private void handlePrint() {
-        // Print current cart as receipt
-        if (!ApplicationState.getInstance().getCart().isEmpty()) {
-            processCheckout();
+        if (!state.getCurrentInput().isEmpty()) {
+            state.clearInput();
+            numberPad.clearDisplay();
+            return;
         }
-    }
 
-    private void handleCartUpdate() {
-        currentItemPanel.updateCartTotal();
-        if (currentView.equals(CHECKOUT_VIEW)) {
-            checkoutPanel.updateCheckout();
+        if (state.hasPendingItem()) {
+            state.clearPendingItem();
+            currentItemPanel.clearDisplay();
+            numberPad.clearDisplay();
         }
     }
 
@@ -334,55 +300,52 @@ public class POSApplication extends JFrame {
             return;
         }
 
-        // Confirm checkout
         boolean confirmed = ConfirmationDialog.confirm(this,
-                "Confirm Checkout",
-                "Process this transaction?<br>Total: " +
-                        String.format("$%.2f", cart.getTotal()));
+                "Confirm Sale",
+                String.format("Process this transaction and print receipt?<br><br><b>Total: %s</b>",
+                        Utility.formatPrice(cart.getTotal())));
 
         if (!confirmed) {
             return;
         }
 
-        // Create transaction
         List<TransactionItem> items = new ArrayList<>();
         cart.getItems().forEach(item -> items.add(new TransactionItem(item)));
 
-        Transaction transaction = new Transaction(
-                0,
-                LocalDateTime.now(),
-                items,
-                cart.getTotal()
-        );
+        Transaction transaction = new Transaction(0, LocalDateTime.now(), items, cart.getTotal());
 
-        // Save transaction
         int transactionId = TransactionDAO.getInstance().saveTransaction(transaction);
         if (transactionId > 0) {
-            // Generate and save receipt
+            // Create a proper transaction object with the ID
+            transaction = new Transaction(transactionId, transaction.getTimestamp(),
+                    transaction.getItems(), transaction.getTotal());
+
+            // Generate PDF receipt
+            String pdfPath = TransactionDAO.getInstance().saveReceiptPdf(
+                    transaction,
+                    Config.getInstance().getStoreName(),
+                    Config.getInstance().getStoreAddress()
+            );
+
+            if (pdfPath != null) {
+                transaction.setReceiptPath(pdfPath);
+                Logger.info("PDF receipt saved to: " + pdfPath);
+            }
+
+            // Also generate text receipt for preview
             String receiptContent = transaction.generateReceipt(
                     Config.getInstance().getStoreName(),
                     Config.getInstance().getStoreAddress()
             );
-            String receiptPath = TransactionDAO.getInstance().saveReceipt(transaction, receiptContent);
-            transaction.setReceiptPath(receiptPath);
 
-            // Update transaction with ID
-            transaction = new Transaction(transactionId, transaction.getTimestamp(),
-                    transaction.getItems(), transaction.getTotal());
-
-            // Show receipt
             ReceiptDialog.showReceipt(this, transaction);
 
-            // Clear cart
             ApplicationState.getInstance().clearCart();
-            cartPanel.clearCart();
+            cartSummaryPanel.clear();
             checkoutPanel.clearCheckout();
-            currentItemPanel.updateCartTotal();
             currentItemPanel.clearDisplay();
 
             Logger.info("Transaction #" + transactionId + " completed successfully");
-
-            // Switch back to products view
             switchView(PRODUCTS_VIEW);
         } else {
             JOptionPane.showMessageDialog(this,
@@ -396,16 +359,12 @@ public class POSApplication extends JFrame {
         currentView = view;
         cardLayout.show(mainContent, view);
 
-        // Update view-specific content
         if (view.equals(CHECKOUT_VIEW)) {
             checkoutPanel.updateCheckout();
-        } else if (view.equals(HISTORY_VIEW)) {
-            // History panel loads data on creation
         } else if (view.equals(PRODUCTS_VIEW)) {
             productsPanel.clearSearch();
         }
 
-        // Update window title
         setTitle(Config.getInstance().getStoreName() + " - " +
                 view.substring(0, 1).toUpperCase() + view.substring(1).toLowerCase());
     }
@@ -415,25 +374,31 @@ public class POSApplication extends JFrame {
     }
 
     private void clearInput() {
-        ApplicationState.getInstance().clearInput();
+        ApplicationState state = ApplicationState.getInstance();
+
+        if (state.hasPendingItem()) {
+            state.clearPendingItem();
+            currentItemPanel.clearDisplay();
+        }
+
+        state.clearInput();
         numberPad.clearDisplay();
     }
 
-    /**
-     * Updates all theme-dependent components.
-     */
+    @Override
+    public void onPendingItemChanged(PendingCartItem item) {
+        // NumberPad handles its own mode updates
+    }
+
     public void updateTheme() {
         ThemeManager.getInstance().applyTheme();
-
-        // Update all panels
         productsPanel.updateTheme();
-        cartPanel.updateTheme();
+        cartSummaryPanel.updateTheme();
         checkoutPanel.updateTheme();
         historyPanel.updateTheme();
         settingsPanel.updateTheme();
         numberPad.updateTheme();
         currentItemPanel.updateTheme();
-
         SwingUtilities.updateComponentTreeUI(this);
     }
 }

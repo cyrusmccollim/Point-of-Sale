@@ -26,6 +26,9 @@ dependencies {
 
     // SLF4J Simple binding for logging
     implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // Apache PDFBox for PDF generation
+    implementation 'org.apache.pdfbox:pdfbox:2.0.30'
 }
 
 application {

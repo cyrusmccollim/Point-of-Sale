@@ -2,8 +2,8 @@ package pos.ui.components;
 
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
+import pos.model.PendingCartItem;
 import pos.util.IconManager;
-import pos.util.Utility;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,186 +11,176 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * A number pad component with numeric buttons and action buttons.
- * Supports QTY, WT, and CONFIRM modes for weighed goods workflow.
- */
-public class NumberPad extends JPanel {
+public class NumberPad extends JPanel implements ApplicationState.StateChangeListener {
     private final List<NumberPadListener> listeners = new ArrayList<>();
     private JTextField displayField;
     private JLabel modeLabel;
-    private ApplicationState.InputMode currentMode = ApplicationState.InputMode.NONE;
 
-    public static final String DELETE = "DELETE";
+    public static final String DELETE  = "DELETE";
     public static final String CONFIRM = "CONFIRM";
-    public static final String SETTINGS = "SETTINGS";
-    public static final String SEARCH = "SEARCH";
-    public static final String PRINT = "PRINT";
-    public static final String CLEAR = "CLEAR";
-    public static final String QTY = "QTY";
-    public static final String WT = "WT";
+    public static final String CLEAR   = "CLEAR";
+    public static final String DECIMAL = ".";
 
     public NumberPad() {
         initialize();
+        ApplicationState.getInstance().addStateChangeListener(this);
     }
 
     private void initialize() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setLayout(new BorderLayout(5, 6));
+        setBorder(new EmptyBorder(5, 5, 5, 5));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        // Top panel with display
-        JPanel topPanel = createDisplayPanel();
-        add(topPanel, BorderLayout.NORTH);
-
-        // Number pad grid
-        JPanel padPanel = createPadPanel();
-        add(padPanel, BorderLayout.CENTER);
+        add(createDisplayPanel(), BorderLayout.NORTH);
+        add(createPadPanel(),     BorderLayout.CENTER);
+        add(createActionPanel(),  BorderLayout.SOUTH);
     }
 
     private JPanel createDisplayPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInstance().getSecondaryColor(), 1, true),
-                new EmptyBorder(10, 10, 10, 10)
-        ));
+        JPanel panel = new JPanel(new BorderLayout(3, 3));
+        panel.setBackground(ThemeManager.getInstance().getSurfaceColor());
+        panel.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        // Mode label
-        modeLabel = new JLabel("Enter weight or quantity", SwingConstants.CENTER);
-        modeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        modeLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
+        modeLabel = new JLabel("Enter Weight", SwingConstants.CENTER);
+        modeLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        modeLabel.setForeground(ThemeManager.getInstance().getAccentColor());
         panel.add(modeLabel, BorderLayout.NORTH);
 
-        // Display field
         displayField = new JTextField();
         displayField.setEditable(false);
-        displayField.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        displayField.setFont(new Font("Segoe UI", Font.BOLD, 30));
         displayField.setHorizontalAlignment(SwingConstants.RIGHT);
-        displayField.setBackground(ThemeManager.getInstance().getBackgroundColor());
+        displayField.setBackground(ThemeManager.getInstance().getSurfaceColor());
         displayField.setForeground(ThemeManager.getInstance().getTextColor());
-        displayField.setBorder(new EmptyBorder(5, 10, 5, 10));
+        displayField.setBorder(new EmptyBorder(2, 6, 2, 6));
+        displayField.setFocusable(false);
         panel.add(displayField, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JPanel createPadPanel() {
-        JPanel panel = new JPanel(new GridLayout(5, 3, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(4, 3, 6, 6));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        // New button layout with QTY, WT, CONFIRM
-        String[] layout = {
-                "7", "8", "9",
-                "4", "5", "6",
-                "1", "2", "3",
-                DELETE, "0", CONFIRM,
-                QTY, WT, SETTINGS
-        };
+        String[] layout = {"1","2","3","4","5","6","7","8","9",DECIMAL,"0",CLEAR};
+        for (String key : layout) panel.add(createNumericButton(key));
+        return panel;
+    }
 
-        for (String key : layout) {
-            JButton button = createButton(key);
-            panel.add(button);
-        }
+    private JPanel createActionPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 2, 8, 0));
+        panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+
+        JButton deleteBtn = createActionButton("Del", IconManager.DELETE,
+                ThemeManager.getInstance().getSurfaceColor(),
+                ThemeManager.getInstance().getTextSecondaryColor(), 14, false);
+        deleteBtn.addActionListener(e -> handleDelete());
+        panel.add(deleteBtn);
+
+        JButton confirmBtn = createActionButton("Add", IconManager.CHECK,
+                ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 14, true);
+        confirmBtn.addActionListener(e -> handleConfirm());
+        panel.add(confirmBtn);
 
         return panel;
     }
 
-    private JButton createButton(String key) {
-        JButton button = new JButton();
+    private JButton createNumericButton(String key) {
+        boolean isClear   = key.equals(CLEAR);
+        boolean isDecimal = key.equals(DECIMAL);
+
+        String  label   = isClear ? "C" : key;
+        Color   bg      = isClear ? new Color(0xDC2626) : ThemeManager.getInstance().getPanelBackgroundColor();
+        Color   fg      = isClear ? Color.WHITE : ThemeManager.getInstance().getTextColor();
+        int     fontSize = (isDecimal || isClear) ? 16 : 22;
+
+        JButton button = new JButton(label);
         button.setFocusable(false);
-        button.setPreferredSize(new Dimension(80, 80));
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 24));
+        button.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBackground(bg);
+        button.setForeground(fg);
+        button.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        if (Utility.isInteger(key)) {
-            // Numeric button
-            button.setText(key);
-            button.setBackground(ThemeManager.getInstance().getSecondaryColor());
-            button.setForeground(ThemeManager.getInstance().getTextColor());
-        } else {
-            // Action button
-            switch (key) {
-                case DELETE -> {
-                    button.setIcon(IconManager.getInstance().getIcon(IconManager.DELETE, 32, 32));
-                    button.setToolTipText("Delete/Clear");
-                    button.setBackground(ThemeManager.getInstance().getAccentColor());
-                    button.setForeground(Color.WHITE);
-                }
-                case CONFIRM -> {
-                    button.setIcon(IconManager.getInstance().getIcon(IconManager.CHECK, 32, 32));
-                    button.setToolTipText("Add to Cart");
-                    button.setBackground(ThemeManager.getInstance().getOrangeColor());
-                    button.setForeground(Color.WHITE);
-                }
-                case SETTINGS -> {
-                    button.setIcon(IconManager.getInstance().getIcon(IconManager.SETTINGS, 32, 32));
-                    button.setToolTipText("Settings");
-                    button.setBackground(ThemeManager.getInstance().getAccentColor());
-                    button.setForeground(Color.WHITE);
-                }
-                case QTY -> {
-                    button.setText("QTY");
-                    button.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                    button.setToolTipText("Set Quantity");
-                    button.setBackground(ThemeManager.getInstance().getSecondaryColor());
-                    button.setForeground(ThemeManager.getInstance().getTextColor());
-                }
-                case WT -> {
-                    button.setText("WT");
-                    button.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                    button.setToolTipText("Set Weight (lb)");
-                    button.setBackground(ThemeManager.getInstance().getSecondaryColor());
-                    button.setForeground(ThemeManager.getInstance().getTextColor());
-                }
-                default -> {
-                    button.setBackground(ThemeManager.getInstance().getAccentColor());
-                    button.setForeground(Color.WHITE);
-                }
-            }
-        }
-
-        button.setBorder(BorderFactory.createLineBorder(
-                ThemeManager.getInstance().getAccentColor(), 1, true));
+        Color hoverBg = isClear ? new Color(0xB91C1C) : ThemeManager.getInstance().getBorderColor();
+        button.getModel().addChangeListener(e -> {
+            boolean roll = button.getModel().isRollover();
+            button.setBackground(roll ? hoverBg : bg);
+        });
 
         button.addActionListener(e -> handleButtonClick(key));
+        return button;
+    }
 
+    private JButton createActionButton(String text, String iconName,
+                                       Color bg, Color fg, int fontSize, boolean isBold) {
+        JButton button = new JButton(text);
+        button.setFocusable(false);
+        button.setFont(new Font("Segoe UI", isBold ? Font.BOLD : Font.PLAIN, fontSize));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBackground(bg);
+        button.setForeground(fg);
+        button.setIcon(IconManager.getInstance().getIcon(iconName, 16, 16));
+        button.setHorizontalTextPosition(SwingConstants.RIGHT);
+        button.setIconTextGap(6);
+        button.setBorder(new EmptyBorder(12, 14, 12, 14));
+        button.setMinimumSize(new Dimension(0, 52));
+        button.setPreferredSize(new Dimension(0, 52));
+
+        Color hoverBg = bg.darker();
+        button.getModel().addChangeListener(e -> {
+            button.setBackground(button.getModel().isRollover() ? hoverBg : bg);
+        });
         return button;
     }
 
     private void handleButtonClick(String key) {
+        String current = ApplicationState.getInstance().getCurrentInput();
         switch (key) {
-            case DELETE -> {
-                ApplicationState.getInstance().deleteLastInputChar();
-                updateDisplay();
-                notifyListeners(DELETE);
-            }
-            case CONFIRM -> {
-                notifyListeners(CONFIRM);
-                ApplicationState.getInstance().clearInput();
-                updateDisplay();
-            }
-            case SETTINGS -> notifyListeners(SETTINGS);
-            case SEARCH -> notifyListeners(SEARCH);
-            case PRINT -> notifyListeners(PRINT);
-            case QTY -> {
-                currentMode = ApplicationState.InputMode.QUANTITY;
-                ApplicationState.getInstance().setInputMode(currentMode);
-                setModeText("QUANTITY MODE");
-                notifyListeners(QTY);
-            }
-            case WT -> {
-                currentMode = ApplicationState.InputMode.WEIGHT;
-                ApplicationState.getInstance().setInputMode(currentMode);
-                setModeText("WEIGHT MODE (lb)");
-                notifyListeners(WT);
+            case CLEAR -> { ApplicationState.getInstance().clearInput(); updateDisplay(); }
+            case DECIMAL -> {
+                if (!current.contains(".")) {
+                    ApplicationState.getInstance().appendInput(".");
+                    updateDisplay();
+                }
             }
             default -> {
-                // Numeric input
-                ApplicationState.getInstance().appendInput(key);
-                updateDisplay();
-                notifyListeners(key);
+                if (current.length() < 8) {
+                    ApplicationState.getInstance().appendInput(key);
+                    updateDisplay();
+                    applyInputToPendingItem();
+                }
             }
+        }
+    }
+
+    private void handleDelete() {
+        if (!ApplicationState.getInstance().getCurrentInput().isEmpty()) {
+            ApplicationState.getInstance().deleteLastInputChar();
+            updateDisplay();
+            applyInputToPendingItem();
+        } else {
+            ApplicationState.getInstance().clearPendingItem();
+            notifyListeners(DELETE);
+        }
+    }
+
+    private void handleConfirm() {
+        notifyListeners(CONFIRM);
+        ApplicationState.getInstance().clearInput();
+        updateDisplay();
+    }
+
+    private void applyInputToPendingItem() {
+        ApplicationState state = ApplicationState.getInstance();
+        double val = state.getCurrentInputAsDouble();
+        if (state.hasPendingItem()) {
+            if (state.getInputMode() == ApplicationState.InputMode.QUANTITY)
+                state.updatePendingQuantity(val);
+            else if (state.getInputMode() == ApplicationState.InputMode.WEIGHT)
+                state.updatePendingWeight(val);
         }
     }
 
@@ -199,72 +189,55 @@ public class NumberPad extends JPanel {
         displayField.setText(input.isEmpty() ? "" : input);
     }
 
-    /**
-     * Sets the mode label text.
-     *
-     * @param mode The mode description
-     */
     public void setModeText(String mode) {
-        modeLabel.setText(mode);
+        if (mode == null || mode.trim().isEmpty()) {
+            modeLabel.setText(" ");
+            modeLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
+        } else {
+            modeLabel.setText(mode.toUpperCase());
+            modeLabel.setForeground(ThemeManager.getInstance().getAccentColor());
+        }
     }
 
-    /**
-     * Clears the display and resets mode.
-     */
     public void clearDisplay() {
         displayField.setText("");
-        currentMode = ApplicationState.InputMode.NONE;
-        setModeText("Enter weight or quantity");
+        updateModeFromState();
     }
 
-    /**
-     * Gets the current input mode.
-     */
-    public ApplicationState.InputMode getCurrentMode() {
-        return currentMode;
+    public double getCurrentInputValue() {
+        return ApplicationState.getInstance().getCurrentInputAsDouble();
     }
 
-    /**
-     * Adds a listener for number pad events.
-     *
-     * @param listener The listener to add
-     */
-    public void addNumberPadListener(NumberPadListener listener) {
-        listeners.add(listener);
-    }
-
-    /**
-     * Removes a listener.
-     *
-     * @param listener The listener to remove
-     */
-    public void removeNumberPadListener(NumberPadListener listener) {
-        listeners.remove(listener);
-    }
-
-    private void notifyListeners(String key) {
-        for (NumberPadListener listener : listeners) {
-            listener.onNumberPadAction(key);
+    private void updateModeFromState() {
+        ApplicationState state = ApplicationState.getInstance();
+        if (state.hasPendingItem()) {
+            setModeText(state.getInputMode() == ApplicationState.InputMode.QUANTITY
+                    ? "Enter Quantity" : "Enter Weight");
+        } else {
+            setModeText("Select Product");
         }
     }
 
-    /**
-     * Updates the component's theme colors.
-     */
+    public void addNumberPadListener(NumberPadListener l)    { listeners.add(l); }
+    public void removeNumberPadListener(NumberPadListener l) { listeners.remove(l); }
+    private void notifyListeners(String key) { listeners.forEach(l -> l.onNumberPadAction(key)); }
+
+    @Override public void onPendingItemChanged(PendingCartItem item) {
+        SwingUtilities.invokeLater(() -> {
+            if (item != null) updateModeFromState();
+            else setModeText("Select Product");
+        });
+    }
+
     public void updateTheme() {
-        setBackground(ThemeManager.getInstance().getBackgroundColor());
-        displayField.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        displayField.setForeground(ThemeManager.getInstance().getTextColor());
-        modeLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
-        // Reapply button colors
-        for (Component comp : getComponents()) {
-            SwingUtilities.updateComponentTreeUI(comp);
-        }
+        ThemeManager tm = ThemeManager.getInstance();
+        setBackground(tm.getBackgroundColor());
+        displayField.setBackground(tm.getSurfaceColor());
+        displayField.setForeground(tm.getTextColor());
+        modeLabel.setForeground(tm.getAccentColor());
+        SwingUtilities.updateComponentTreeUI(this);
     }
 
-    /**
-     * Listener interface for number pad events.
-     */
     public interface NumberPadListener {
         void onNumberPadAction(String key);
     }

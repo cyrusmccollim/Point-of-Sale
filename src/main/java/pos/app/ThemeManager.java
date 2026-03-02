@@ -9,55 +9,45 @@ import pos.util.Logger;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Manages application themes (light/dark modes).
- */
 public class ThemeManager {
     private static final ThemeManager INSTANCE = new ThemeManager();
 
-    public static final Color LIGHT_BG = new Color(250, 250, 250);
-    public static final Color LIGHT_PANEL_BG = new Color(255, 255, 255);
-    public static final Color LIGHT_ACCENT = new Color(52, 106, 179);
-    public static final Color LIGHT_SECONDARY = new Color(116, 170, 242);
-    public static final Color LIGHT_ORANGE = new Color(235, 144, 75);
-    public static final Color LIGHT_TEXT = new Color(30, 30, 30);
-    public static final Color LIGHT_TEXT_SECONDARY = new Color(100, 100, 100);
+    // Light theme
+    public static final Color LIGHT_BG             = new Color(0xF0F0F5);
+    public static final Color LIGHT_PANEL_BG       = new Color(0xFFFFFF);
+    public static final Color LIGHT_SURFACE        = new Color(0xFAFAFA);
+    public static final Color LIGHT_ACCENT         = new Color(0x5B5BD6);
+    public static final Color LIGHT_ACCENT_HOVER   = new Color(0x4747C2);
+    public static final Color LIGHT_ORANGE         = new Color(0xF07820);
+    public static final Color LIGHT_TEXT           = new Color(0x18181B);
+    public static final Color LIGHT_TEXT_SECONDARY = new Color(0x71717A);
+    public static final Color LIGHT_BORDER         = new Color(0xE4E4E7);
 
-    public static final Color DARK_BG = new Color(40, 40, 44);
-    public static final Color DARK_PANEL_BG = new Color(50, 50, 54);
-    public static final Color DARK_ACCENT = new Color(100, 149, 237);
-    public static final Color DARK_SECONDARY = new Color(70, 130, 200);
-    public static final Color DARK_ORANGE = new Color(255, 160, 90);
-    public static final Color DARK_TEXT = new Color(240, 240, 240);
-    public static final Color DARK_TEXT_SECONDARY = new Color(180, 180, 180);
+    // Dark theme
+    public static final Color DARK_BG              = new Color(0x18181B);
+    public static final Color DARK_PANEL_BG        = new Color(0x27272A);
+    public static final Color DARK_SURFACE         = new Color(0x1E1E21);
+    public static final Color DARK_ACCENT          = new Color(0x7C7CE8);
+    public static final Color DARK_ACCENT_HOVER    = new Color(0x9595F0);
+    public static final Color DARK_ORANGE          = new Color(0xFF9940);
+    public static final Color DARK_TEXT            = new Color(0xFAFAFA);
+    public static final Color DARK_TEXT_SECONDARY  = new Color(0xA1A1AA);
+    public static final Color DARK_BORDER          = new Color(0x3F3F46);
 
     private boolean darkMode = false;
 
     private ThemeManager() {
-        String savedTheme = Config.getInstance().getTheme();
-        this.darkMode = "dark".equalsIgnoreCase(savedTheme);
+        this.darkMode = "dark".equalsIgnoreCase(Config.getInstance().getTheme());
     }
 
-    public static ThemeManager getInstance() {
-        return INSTANCE;
-    }
+    public static ThemeManager getInstance() { return INSTANCE; }
 
-    /**
-     * Applies the current theme to the application.
-     */
     public void applyTheme() {
         try {
             FlatLaf laf = darkMode ? new FlatDarkLaf() : new FlatLightLaf();
             UIManager.setLookAndFeel(laf);
-
-            // Apply custom colors
             applyCustomColors();
-
-            // Update all existing windows
-            for (Window window : Window.getWindows()) {
-                SwingUtilities.updateComponentTreeUI(window);
-            }
-
+            for (Window w : Window.getWindows()) SwingUtilities.updateComponentTreeUI(w);
             Logger.info("Applied " + (darkMode ? "dark" : "light") + " theme");
         } catch (Exception e) {
             Logger.error("Failed to apply theme", e);
@@ -65,34 +55,42 @@ public class ThemeManager {
     }
 
     private void applyCustomColors() {
+        Color accent   = darkMode ? DARK_ACCENT : LIGHT_ACCENT;
+        Color text     = darkMode ? DARK_TEXT   : LIGHT_TEXT;
+
         if (darkMode) {
-            // Dark theme colors
-            UIManager.put("Panel.background", DARK_PANEL_BG);
-            UIManager.put("Button.background", DARK_SECONDARY);
-            UIManager.put("Button.foreground", DARK_TEXT);
-            UIManager.put("Label.foreground", DARK_TEXT);
-            UIManager.put("TextField.background", DARK_BG);
-            UIManager.put("TextField.foreground", DARK_TEXT);
-            UIManager.put("List.background", DARK_BG);
-            UIManager.put("List.foreground", DARK_TEXT);
+            UIManager.put("Panel.background",      DARK_PANEL_BG);
+            UIManager.put("Button.background",     DARK_SURFACE);
+            UIManager.put("Button.foreground",     DARK_TEXT);
+            UIManager.put("Label.foreground",      DARK_TEXT);
+            UIManager.put("TextField.background",  DARK_BG);
+            UIManager.put("TextField.foreground",  DARK_TEXT);
+            UIManager.put("List.background",       DARK_BG);
+            UIManager.put("List.foreground",       DARK_TEXT);
             UIManager.put("ScrollPane.background", DARK_BG);
         } else {
-            // Light theme colors
-            UIManager.put("Panel.background", LIGHT_PANEL_BG);
-            UIManager.put("Button.background", LIGHT_SECONDARY);
-            UIManager.put("Button.foreground", LIGHT_TEXT);
-            UIManager.put("Label.foreground", LIGHT_TEXT);
-            UIManager.put("TextField.background", LIGHT_PANEL_BG);
-            UIManager.put("TextField.foreground", LIGHT_TEXT);
-            UIManager.put("List.background", LIGHT_PANEL_BG);
-            UIManager.put("List.foreground", LIGHT_TEXT);
+            UIManager.put("Panel.background",      LIGHT_PANEL_BG);
+            UIManager.put("Button.background",     LIGHT_SURFACE);
+            UIManager.put("Button.foreground",     LIGHT_TEXT);
+            UIManager.put("Label.foreground",      LIGHT_TEXT);
+            UIManager.put("TextField.background",  LIGHT_PANEL_BG);
+            UIManager.put("TextField.foreground",  LIGHT_TEXT);
+            UIManager.put("List.background",       LIGHT_PANEL_BG);
+            UIManager.put("List.foreground",       LIGHT_TEXT);
             UIManager.put("ScrollPane.background", LIGHT_PANEL_BG);
         }
+
+        UIManager.put("Component.arc",        10);
+        UIManager.put("Button.arc",           10);
+        UIManager.put("TextComponent.arc",    8);
+        UIManager.put("Component.focusWidth", 1);
+        UIManager.put("ScrollBar.thumbArc",   999);
+        UIManager.put("ScrollBar.width",      8);
+        UIManager.put("Table.selectionBackground",
+                new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 30));
+        UIManager.put("Table.selectionForeground", text);
     }
 
-    /**
-     * Toggles between light and dark themes.
-     */
     public void toggleTheme() {
         darkMode = !darkMode;
         Config.getInstance().setTheme(darkMode ? "dark" : "light");
@@ -100,11 +98,6 @@ public class ThemeManager {
         applyTheme();
     }
 
-    /**
-     * Sets the theme to light or dark.
-     *
-     * @param dark true for dark theme, false for light theme
-     */
     public void setDarkMode(boolean dark) {
         if (this.darkMode != dark) {
             this.darkMode = dark;
@@ -114,70 +107,16 @@ public class ThemeManager {
         }
     }
 
-    public boolean isDarkMode() {
-        return darkMode;
-    }
+    public boolean isDarkMode() { return darkMode; }
 
-    /**
-     * Gets the current accent color based on theme.
-     *
-     * @return The accent color
-     */
-    public Color getAccentColor() {
-        return darkMode ? DARK_ACCENT : LIGHT_ACCENT;
-    }
-
-    /**
-     * Gets the current secondary color based on theme.
-     *
-     * @return The secondary color
-     */
-    public Color getSecondaryColor() {
-        return darkMode ? DARK_SECONDARY : LIGHT_SECONDARY;
-    }
-
-    /**
-     * Gets the current background color.
-     *
-     * @return The background color
-     */
-    public Color getBackgroundColor() {
-        return darkMode ? DARK_BG : LIGHT_BG;
-    }
-
-    /**
-     * Gets the current panel background color.
-     *
-     * @return The panel background color
-     */
-    public Color getPanelBackgroundColor() {
-        return darkMode ? DARK_PANEL_BG : LIGHT_PANEL_BG;
-    }
-
-    /**
-     * Gets the current text color.
-     *
-     * @return The text color
-     */
-    public Color getTextColor() {
-        return darkMode ? DARK_TEXT : LIGHT_TEXT;
-    }
-
-    /**
-     * Gets the current secondary text color.
-     *
-     * @return The secondary text color
-     */
-    public Color getTextSecondaryColor() {
-        return darkMode ? DARK_TEXT_SECONDARY : LIGHT_TEXT_SECONDARY;
-    }
-
-    /**
-     * Gets the orange accent color (always visible).
-     *
-     * @return The orange color
-     */
-    public Color getOrangeColor() {
-        return darkMode ? DARK_ORANGE : LIGHT_ORANGE;
-    }
+    public Color getAccentColor()         { return darkMode ? DARK_ACCENT        : LIGHT_ACCENT; }
+    public Color getAccentHoverColor()    { return darkMode ? DARK_ACCENT_HOVER   : LIGHT_ACCENT_HOVER; }
+    public Color getSurfaceColor()        { return darkMode ? DARK_SURFACE        : LIGHT_SURFACE; }
+    public Color getBorderColor()         { return darkMode ? DARK_BORDER         : LIGHT_BORDER; }
+    public Color getSecondaryColor()      { return getBorderColor(); }   // backward compat
+    public Color getBackgroundColor()     { return darkMode ? DARK_BG             : LIGHT_BG; }
+    public Color getPanelBackgroundColor(){ return darkMode ? DARK_PANEL_BG       : LIGHT_PANEL_BG; }
+    public Color getTextColor()           { return darkMode ? DARK_TEXT           : LIGHT_TEXT; }
+    public Color getTextSecondaryColor()  { return darkMode ? DARK_TEXT_SECONDARY : LIGHT_TEXT_SECONDARY; }
+    public Color getOrangeColor()         { return darkMode ? DARK_ORANGE         : LIGHT_ORANGE; }
 }
