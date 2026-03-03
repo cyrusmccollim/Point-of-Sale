@@ -15,7 +15,7 @@ import java.util.List;
 
 public class CheckoutPanel extends JPanel {
     private final JLabel totalLabel     = new JLabel("$0.00");
-    private final JLabel itemCountLabel = new JLabel("0 items");
+    //private final JLabel itemCountLabel = new JLabel("0 items");
     private JPanel itemsContainer;
 
     public CheckoutPanel() {
@@ -38,11 +38,6 @@ public class CheckoutPanel extends JPanel {
         titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(titleLabel, BorderLayout.WEST);
 
-        JLabel hintLabel = new JLabel("Press Enter to complete sale");
-        hintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        hintLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
-        panel.add(hintLabel, BorderLayout.EAST);
-
         return panel;
     }
 
@@ -53,16 +48,6 @@ public class CheckoutPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(ThemeManager.getInstance().getBackgroundColor());
         headerPanel.setBorder(new EmptyBorder(0, 0, 6, 0));
-
-        JLabel itemsHeader = new JLabel("Order Items");
-        itemsHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        itemsHeader.setForeground(ThemeManager.getInstance().getTextColor());
-        headerPanel.add(itemsHeader, BorderLayout.WEST);
-
-        itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        itemCountLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
-        headerPanel.add(itemCountLabel, BorderLayout.EAST);
-        panel.add(headerPanel, BorderLayout.NORTH);
 
         itemsContainer = new JPanel();
         itemsContainer.setLayout(new BoxLayout(itemsContainer, BoxLayout.Y_AXIS));
@@ -94,17 +79,17 @@ public class CheckoutPanel extends JPanel {
         totalStack.add(totalLabel);
         panel.add(totalStack, BorderLayout.WEST);
 
-        // Right: Process Sale button
-        JButton processButton = UIFactory.createButton("Print Receipt",
-                ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 10);
+        JButton processButton = UIFactory.createButton("Print Receipt", ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 10);
         processButton.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        processButton.setPreferredSize(new Dimension(160, 44));
-        processButton.setIcon(IconManager.getInstance().getIcon(IconManager.PRINT, 16, 16));
+        processButton.setPreferredSize(new Dimension(160, 50)); 
         processButton.setHorizontalTextPosition(SwingConstants.RIGHT);
         processButton.setIconTextGap(8);
-        processButton.addActionListener(e ->
-                pos.app.POSApplication.getInstance().processCheckout());
-        panel.add(processButton, BorderLayout.EAST);
+        processButton.addActionListener(e -> pos.app.POSApplication.getInstance().processCheckout());
+
+        JPanel buttonWrapper = new JPanel(new BorderLayout());
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(processButton, BorderLayout.SOUTH);
+        panel.add(buttonWrapper, BorderLayout.EAST);
 
         return panel;
     }
@@ -112,8 +97,6 @@ public class CheckoutPanel extends JPanel {
     public void updateCheckout() {
         itemsContainer.removeAll();
         List<CartItem> items = ApplicationState.getInstance().getCart().getItems();
-        int count = ApplicationState.getInstance().getCart().getItemCount();
-        itemCountLabel.setText(count + " item" + (count != 1 ? "s" : ""));
 
         if (items.isEmpty()) {
             JPanel emptyPanel = new JPanel();
@@ -212,7 +195,6 @@ public class CheckoutPanel extends JPanel {
     public void clearCheckout() {
         itemsContainer.removeAll();
         totalLabel.setText("$0.00");
-        itemCountLabel.setText("0 items");
     }
 
     public void updateTheme() {

@@ -8,7 +8,10 @@ import pos.util.UIFactory;
 import pos.util.Utility;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -29,7 +32,7 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
 
         setLayout(new BorderLayout(0, 4));
         setPreferredSize(new Dimension(155, 105));
-        setBorder(new EmptyBorder(8, 8, 8, 8));
+        setBorder(new EmptyBorder(16, 8, 8, 16));
         setOpaque(false);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -45,7 +48,7 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
         nameLabel = new JLabel(
                 "<html><div style='text-align:center;'>" + product.getName() + "</div></html>",
                 SwingConstants.CENTER);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
         nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
         add(nameLabel, BorderLayout.CENTER);
 

@@ -10,8 +10,7 @@ import pos.util.UIFactory;
 import pos.util.Utility;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.MatteBorder;
+import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -39,41 +38,49 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
     private void initialize() {
         setLayout(new BorderLayout(6, 4));
-        setBorder(new javax.swing.border.CompoundBorder(
-                new MatteBorder(0, 0, 1, 0, new Color(0, 0, 0, 40)),
-                new EmptyBorder(8, 14, 8, 14)));
+        setBorder(new CompoundBorder(
+                new MatteBorder(10, 0, 0, 0, new Color(0, 0, 0, 40)),
+                new EmptyBorder(8, 14, 14, 14)));
         setBackground(ThemeManager.getInstance().getOrangeColor());
 
         // Top row: department badge
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
         departmentBadge = UIFactory.createBadge("Deli", new Color(0, 0, 0, 60), Color.WHITE);
+        departmentBadge.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        departmentBadge.setPreferredSize(new Dimension(70, 30));
         topRow.add(departmentBadge, BorderLayout.WEST);
         add(topRow, BorderLayout.NORTH);
 
         // Center: [X] | name + price/lb | [✓]
         JPanel centerContainer = new JPanel(new BorderLayout(10, 0));
+        centerContainer.setBorder(new EmptyBorder(20, 0, 20, 0));
         centerContainer.setOpaque(false);
 
-        removeBtn = createIconButton("✕");
+        removeBtn = createIconButton("✕ Cancel");
+        removeBtn.setPreferredSize(new Dimension(120, 45));
         removeBtn.addActionListener(e -> ApplicationState.getInstance().clearPendingItem());
 
-        confirmBtn = createIconButton("✓");
+        confirmBtn = createIconButton("✓ Add");
+        confirmBtn.setPreferredSize(new Dimension(120, 45));
         confirmBtn.setFont(new Font("Segoe UI", Font.BOLD, 22));
         confirmBtn.addActionListener(e -> POSApplication.getInstance().handleConfirm());
 
-        JPanel namePanel = new JPanel(new GridLayout(2, 1, 0, 1));
+        JPanel namePanel = new JPanel(new GridBagLayout()); 
         namePanel.setOpaque(false);
 
-        productNameLabel = new JLabel("Select a product", SwingConstants.CENTER);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER; 
+
+        productNameLabel = new JLabel("Select Product", SwingConstants.CENTER);
         productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         productNameLabel.setForeground(Color.WHITE);
-        namePanel.add(productNameLabel);
+        namePanel.add(productNameLabel, gbc); 
 
-        pricePerLbInlineLabel = new JLabel("", SwingConstants.CENTER);
+        pricePerLbInlineLabel = new JLabel(" ", SwingConstants.CENTER);
         pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 16));
         pricePerLbInlineLabel.setForeground(new Color(255, 255, 255, 200));
-        namePanel.add(pricePerLbInlineLabel);
+        namePanel.add(pricePerLbInlineLabel, gbc);
 
         centerContainer.add(removeBtn,  BorderLayout.WEST);
         centerContainer.add(namePanel,   BorderLayout.CENTER);
@@ -92,8 +99,9 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         weightValueLabel = createMetricValue();
         itemTotalLabel   = createMetricValue();
 
-        qtyPanel    = createMetricPanel("QTY", qtyValueLabel, true);
-        weightPanel = createMetricPanel("WT (lb)", weightValueLabel, true);
+        qtyPanel    = createMetricPanel("QUANTITY", qtyValueLabel, true);
+        weightPanel = createMetricPanel("WEIGHT (lb)", weightValueLabel, true);
+
         JPanel totalPanel = createMetricPanel("TOTAL", itemTotalLabel, false);
 
         metricsPanel.add(qtyPanel);
@@ -161,7 +169,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         panel.setBorder(new EmptyBorder(3, 8, 3, 8));
 
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 10));
+        nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 15));
         nameLabel.setForeground(new Color(255, 255, 255, 153));
 
         panel.add(nameLabel, BorderLayout.NORTH);
@@ -208,12 +216,16 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     }
 
     public void updatePendingItem(PendingCartItem item) {
+        qtyValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        weightValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        itemTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        
         if (item == null) {
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");
             itemTotalLabel.setText("$0.00");
-            productNameLabel.setText("Select a product");
-            productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 22));
+            productNameLabel.setText("Select Product");
+            productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
             pricePerLbInlineLabel.setText("");
             qtySelected = false;
             weightSelected = false;

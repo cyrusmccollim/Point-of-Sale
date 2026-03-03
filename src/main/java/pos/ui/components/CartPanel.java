@@ -51,10 +51,12 @@ public class CartPanel extends JPanel {
         titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(titleLabel, BorderLayout.WEST);
 
+        /*
         itemCountLabel = new JLabel("0 items");
         itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         itemCountLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         panel.add(itemCountLabel, BorderLayout.EAST);
+        */
 
         return panel;
     }
@@ -99,7 +101,7 @@ public class CartPanel extends JPanel {
         double total = ApplicationState.getInstance().getCart().getTotal();
         int count    = ApplicationState.getInstance().getCart().getItemCount();
         totalLabel.setText(Utility.formatPrice(total));
-        itemCountLabel.setText(count + " item" + (count != 1 ? "s" : ""));
+        //itemCountLabel.setText(count + " item" + (count != 1 ? "s" : ""));
     }
 
     public void clearCart() {

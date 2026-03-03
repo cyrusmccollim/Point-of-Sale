@@ -132,7 +132,7 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
         panel.setBorder(new javax.swing.border.CompoundBorder(
                 new MatteBorder(0, 2, 0, 0, ThemeManager.getInstance().getSeparatorColor()),
-                new EmptyBorder(8, 8, 8, 8)));
+                new EmptyBorder(8, 0, 8, 0)));
         panel.setPreferredSize(new Dimension(320, 0));
         panel.add(cartSummaryPanel, BorderLayout.NORTH);
         panel.add(numberPad,        BorderLayout.CENTER);

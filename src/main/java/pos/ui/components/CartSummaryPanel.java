@@ -23,7 +23,7 @@ public class CartSummaryPanel extends JPanel {
         setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         setBorder(new CompoundBorder(
                 new MatteBorder(0, 0, 2, 0, ThemeManager.getInstance().getSeparatorColor()),
-                new EmptyBorder(12, 16, 12, 16)
+                new EmptyBorder(16, 16, 12, 16)
         ));
 
         // Top: item count

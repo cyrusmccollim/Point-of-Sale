@@ -56,15 +56,14 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         inner.setOpaque(false);
         inner.setBorder(new EmptyBorder(6, 8, 6, 8));
 
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         searchField.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         searchField.setForeground(ThemeManager.getInstance().getTextColor());
-        searchField.setBorder(new EmptyBorder(4, 4, 4, 4));
+        searchField.setBorder(new EmptyBorder(4, 10, 4, 4));
         searchField.setPreferredSize(new Dimension(0, 40));
         searchField.setToolTipText("Search products by name or CPU code (Ctrl+F)");
         searchField.putClientProperty("JTextField.placeholderText", "Search products…");
-        searchField.putClientProperty("JTextField.leadingIcon",
-                IconManager.getInstance().getIcon(IconManager.SEARCH, 16, 16));
+        searchField.putClientProperty("JTextField.leadingIcon", IconManager.getInstance().getIcon(IconManager.SEARCH, 25, 25));
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e)  { filterProducts(); }
