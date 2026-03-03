@@ -35,7 +35,6 @@ public class ThemeManager {
     }
 
     private void applyCustomColors() {
-        Color accent = LIGHT_ACCENT;
         Color text = LIGHT_TEXT;
 
         UIManager.put("Panel.background",      LIGHT_PANEL_BG);

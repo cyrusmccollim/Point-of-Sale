@@ -4,7 +4,6 @@ import pos.db.DatabaseManager;
 import pos.db.TransactionDAO;
 import pos.model.Cart;
 import pos.model.PendingCartItem;
-import pos.model.Product;
 import pos.model.Transaction;
 import pos.model.TransactionItem;
 import pos.ui.components.CartSummaryPanel;
