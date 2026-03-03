@@ -27,8 +27,8 @@ public class CartSummaryPanel extends JPanel {
         ));
 
         // Top: item count
-        itemCountLabel = new JLabel("0 items");
-        itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        itemCountLabel = new JLabel("0 cart items");
+        itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         itemCountLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         itemCountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(itemCountLabel);
@@ -42,7 +42,7 @@ public class CartSummaryPanel extends JPanel {
         bottomRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
 
         JLabel totalTextLabel = new JLabel("Total");
-        totalTextLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalTextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 24));
         totalTextLabel.setForeground(ThemeManager.getInstance().getTextColor());
         bottomRow.add(totalTextLabel, BorderLayout.WEST);
 

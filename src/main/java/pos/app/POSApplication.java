@@ -209,13 +209,13 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         btn.getModel().addChangeListener(e -> {
             ThemeManager tm = ThemeManager.getInstance();
             btn.setForeground(btn.isSelected() ? tm.getAccentColor() : tm.getTextSecondaryColor());
-            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 13));
+            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 17));
             btn.repaint();
         });
 
         ThemeManager tm = ThemeManager.getInstance();
         btn.setForeground(tm.getTextSecondaryColor());
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        btn.setFont(new Font("Segoe UI", Font.PLAIN, 17));
         return btn;
     }
 
@@ -224,7 +224,7 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         ThemeManager tm = ThemeManager.getInstance();
         for (JToggleButton btn : navButtons) {
             btn.setForeground(btn.isSelected() ? tm.getAccentColor() : tm.getTextSecondaryColor());
-            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 13));
+            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 17));
         }
     }
 

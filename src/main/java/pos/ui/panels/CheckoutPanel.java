@@ -34,7 +34,7 @@ public class CheckoutPanel extends JPanel {
         panel.setBorder(new EmptyBorder(10, 14, 10, 14));
 
         JLabel titleLabel = new JLabel("Checkout");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 25));
         titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(titleLabel, BorderLayout.WEST);
 
@@ -105,13 +105,13 @@ public class CheckoutPanel extends JPanel {
             emptyPanel.setBorder(new EmptyBorder(30, 0, 0, 0));
 
             JLabel emptyLabel = new JLabel("No items in cart", SwingConstants.CENTER);
-            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 20));
             emptyLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             emptyPanel.add(emptyLabel);
 
             JLabel hintLabel = new JLabel("Add products from the Products page", SwingConstants.CENTER);
-            hintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            hintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
             hintLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
             hintLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             emptyPanel.add(hintLabel);
@@ -147,7 +147,7 @@ public class CheckoutPanel extends JPanel {
         infoPanel.setOpaque(false);
 
         JLabel nameLabel = new JLabel(item.getDisplayName());
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
         infoPanel.add(nameLabel);
 
@@ -156,7 +156,7 @@ public class CheckoutPanel extends JPanel {
                                 Utility.formatPrice(item.getUnitPrice()))
                 : String.format("%.0f @ %s", item.getQuantity(), Utility.formatPrice(item.getUnitPrice()));
         JLabel detailsLabel = new JLabel(details);
-        detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         detailsLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         infoPanel.add(detailsLabel);
 
@@ -166,12 +166,12 @@ public class CheckoutPanel extends JPanel {
         rightPanel.setOpaque(false);
 
         JLabel priceLabel = new JLabel(Utility.formatPrice(item.getTotalPrice()));
-        priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         priceLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
         rightPanel.add(priceLabel, BorderLayout.CENTER);
 
         JButton removeBtn = new JButton("✕");
-        removeBtn.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        removeBtn.setFont(new Font("Segoe UI", Font.BOLD, 20));
         removeBtn.setPreferredSize(new Dimension(22, 22));
         removeBtn.setFocusable(false);
         removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));

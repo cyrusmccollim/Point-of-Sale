@@ -39,7 +39,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     private void initialize() {
         setLayout(new BorderLayout(6, 4));
         setBorder(new CompoundBorder(
-                new MatteBorder(10, 0, 0, 0, new Color(0, 0, 0, 40)),
+                new MatteBorder(0, 0, 0, 0, new Color(0, 0, 0, 40)),
                 new EmptyBorder(8, 14, 14, 14)));
         setBackground(ThemeManager.getInstance().getOrangeColor());
 
@@ -47,14 +47,14 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
         departmentBadge = UIFactory.createBadge("Deli", new Color(0, 0, 0, 60), Color.WHITE);
-        departmentBadge.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        departmentBadge.setPreferredSize(new Dimension(70, 30));
-        topRow.add(departmentBadge, BorderLayout.WEST);
+        departmentBadge.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        departmentBadge.setPreferredSize(new Dimension(80, 30));
+        topRow.add(departmentBadge, BorderLayout.WEST); 
         add(topRow, BorderLayout.NORTH);
 
         // Center: [X] | name + price/lb | [✓]
         JPanel centerContainer = new JPanel(new BorderLayout(10, 0));
-        centerContainer.setBorder(new EmptyBorder(20, 0, 20, 0));
+        centerContainer.setBorder(new EmptyBorder(10, 0, 10, 0));
         centerContainer.setOpaque(false);
 
         removeBtn = createIconButton("✕ Cancel");
@@ -78,7 +78,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         namePanel.add(productNameLabel, gbc); 
 
         pricePerLbInlineLabel = new JLabel(" ", SwingConstants.CENTER);
-        pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 16));
+        pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 20));
         pricePerLbInlineLabel.setForeground(new Color(255, 255, 255, 200));
         namePanel.add(pricePerLbInlineLabel, gbc);
 
@@ -219,7 +219,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         qtyValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         weightValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         itemTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        
+
         if (item == null) {
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");

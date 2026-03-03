@@ -45,7 +45,7 @@ public class SettingsPanel extends JPanel {
         panel.setBorder(new EmptyBorder(10, 14, 10, 14));
 
         JLabel titleLabel = new JLabel("Settings");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 25));
         titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
         panel.add(titleLabel, BorderLayout.WEST);
         return panel;

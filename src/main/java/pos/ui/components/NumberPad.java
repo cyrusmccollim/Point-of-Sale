@@ -6,14 +6,17 @@ import pos.model.PendingCartItem;
 import pos.util.IconManager;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class NumberPad extends JPanel implements ApplicationState.StateChangeListener {
     private final List<NumberPadListener> listeners = new ArrayList<>();
-    private JTextField displayField;
+    private JLabel displayField;
     private JLabel modeLabel;
     private JButton doneButton;
 
@@ -41,18 +44,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     }
 
     private JPanel createDisplayPanel() {
-        // Use a solid, clearly visible background so the display area stands out
-        Color displayBg = new Color(0xEAEAF4);
-
-        JPanel panel = new JPanel(new BorderLayout(3, 3)) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(displayBg);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.dispose();
-            }
-        };
+        JPanel panel = new JPanel(new BorderLayout(3, 3));
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(8, 12, 8, 12));
 
@@ -61,14 +53,11 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         modeLabel.setForeground(ThemeManager.getInstance().getAccentColor());
         panel.add(modeLabel, BorderLayout.NORTH);
 
-        displayField = new JTextField();
-        displayField.setEditable(false);
+        displayField = new JLabel(" ", SwingConstants.RIGHT); 
+        displayField.setOpaque(true); 
         displayField.setFont(new Font("Segoe UI", Font.BOLD, 30));
-        displayField.setHorizontalAlignment(SwingConstants.RIGHT);
-        displayField.setOpaque(false);
         displayField.setForeground(ThemeManager.getInstance().getTextColor());
-        displayField.setBorder(new EmptyBorder(2, 6, 2, 6));
-        displayField.setFocusable(false);
+        displayField.setBorder(new CompoundBorder(new LineBorder(Color.GRAY), new EmptyBorder(2, 6, 2, 8)));
         panel.add(displayField, BorderLayout.CENTER);
 
         return panel;
@@ -88,11 +77,10 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
         panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        doneButton = new JButton("Done");
+        doneButton = new JButton("Enter");
         doneButton.setFocusable(false);
-        doneButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        doneButton.setFont(new Font("Segoe UI", Font.BOLD, 25));
         doneButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        doneButton.setIcon(IconManager.getInstance().getIcon(IconManager.CHECK, 16, 16));
         doneButton.setHorizontalTextPosition(SwingConstants.RIGHT);
         doneButton.setIconTextGap(6);
         doneButton.setBorder(new EmptyBorder(12, 14, 12, 14));
@@ -113,9 +101,9 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         boolean isDecimal = key.equals(DECIMAL);
 
         String label    = isClear ? "C" : key;
-        Color  bg       = isClear ? new Color(0xDC2626) : ThemeManager.getInstance().getPanelBackgroundColor();
-        Color  fg       = isClear ? Color.WHITE : ThemeManager.getInstance().getTextColor();
-        int    fontSize = (isDecimal || isClear) ? 16 : 22;
+        Color  bg       = ThemeManager.getInstance().getPanelBackgroundColor();
+        Color  fg       = ThemeManager.getInstance().getTextColor();
+        int    fontSize = (isDecimal)? 40: 30;
 
         JButton button = new JButton(label);
         button.setFocusable(false);
@@ -208,7 +196,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     }
 
     public void clearDisplay() {
-        displayField.setText("");
+        displayField.setText(" ");
         updateDoneState("");
         updateModeFromState();
     }
@@ -239,7 +227,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
             else {
                 setModeText("Select Product");
                 // Clear input when product is removed
-                displayField.setText("");
+                displayField.setText(" ");
                 updateDoneState("");
             }
         });
@@ -251,7 +239,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
             else if (mode == ApplicationState.InputMode.WEIGHT) setModeText("Enter Weight");
             else if (mode == ApplicationState.InputMode.NONE) {
                 setModeText("Select Field");
-                displayField.setText("");
+                displayField.setText(" ");
                 updateDoneState("");
             }
         });
