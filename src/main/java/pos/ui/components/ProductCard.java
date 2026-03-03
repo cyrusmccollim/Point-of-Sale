@@ -8,10 +8,7 @@ import pos.util.UIFactory;
 import pos.util.Utility;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -36,40 +33,26 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
         setOpaque(false);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // NORTH: CPU badge
-        cpuBadge = UIFactory.createBadge(product.getCpu(),
-                ThemeManager.getInstance().getAccentColor(), Color.WHITE);
+        cpuBadge = UIFactory.createBadge(product.getCpu(), ThemeManager.getInstance().getAccentColor(), Color.WHITE);
         JPanel north = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         north.setOpaque(false);
         north.add(cpuBadge);
         add(north, BorderLayout.NORTH);
 
-        // CENTER: product name
-        nameLabel = new JLabel(
-                "<html><div style='text-align:center;'>" + product.getName() + "</div></html>",
-                SwingConstants.CENTER);
+        nameLabel = new JLabel("<html><div style='text-align:center;'>" + product.getName() + "</div></html>", SwingConstants.CENTER);
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
         nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
         add(nameLabel, BorderLayout.CENTER);
 
-        // SOUTH: price
         priceLabel = new JLabel(Utility.formatPrice(product.getPrice()) + "/lb", SwingConstants.CENTER);
         priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         priceLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
         add(priceLabel, BorderLayout.SOUTH);
 
         addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                ApplicationState.getInstance().setPendingProduct(product);
-                selected = true;
-                repaint();
-            }
-            @Override public void mouseEntered(MouseEvent e) {
-                if (!selected) { hovered = true; repaint(); }
-            }
-            @Override public void mouseExited(MouseEvent e) {
-                hovered = false; repaint();
-            }
+            @Override public void mouseClicked(MouseEvent e) { ApplicationState.getInstance().setPendingProduct(product); selected = true; repaint(); }
+            @Override public void mouseEntered(MouseEvent e) { if (!selected) { hovered = true; repaint(); } }
+            @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
         });
 
         ApplicationState.getInstance().addStateChangeListener(this);
@@ -82,30 +65,26 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
 
         ThemeManager tm = ThemeManager.getInstance();
 
-        // Shadow
         g2.setColor(new Color(0, 0, 0, 20));
         g2.fillRoundRect(2, 3, getWidth() - 3, getHeight() - 3, ARC * 2, ARC * 2);
 
-        // Background
         Color bg;
         if (selected) {
             bg = tm.getAccentColor();
         } else if (hovered) {
-            // Surface tinted with accent at ~8%
-            Color s = tm.getSurfaceColor();
-            Color a = tm.getAccentColor();
-            bg = new Color(
-                    (int)(s.getRed()   * 0.92 + a.getRed()   * 0.08),
-                    (int)(s.getGreen() * 0.92 + a.getGreen() * 0.08),
-                    (int)(s.getBlue()  * 0.92 + a.getBlue()  * 0.08)
-            );
+            Color s = tm.getSurfaceColor(), a = tm.getAccentColor();
+            bg = new Color((int)(s.getRed() * 0.92 + a.getRed() * 0.08), (int)(s.getGreen() * 0.92 + a.getGreen() * 0.08), (int)(s.getBlue() * 0.92 + a.getBlue() * 0.08));
         } else {
             bg = tm.getPanelBackgroundColor();
         }
         g2.setColor(bg);
         g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, ARC * 2, ARC * 2);
 
-        // Hover border
+        if (!selected) {
+            g2.setColor(new Color(0, 0, 0, 35));
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawRoundRect(0, 0, getWidth() - 3, getHeight() - 3, ARC * 2, ARC * 2);
+        }
         if (hovered && !selected) {
             g2.setColor(tm.getAccentColor());
             g2.setStroke(new BasicStroke(1.5f));
@@ -113,7 +92,6 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
         }
 
         g2.dispose();
-        // Update child colors based on state
         updateChildColors(selected);
     }
 
@@ -132,21 +110,13 @@ public class ProductCard extends JPanel implements ApplicationState.StateChangeL
         }
     }
 
-    public void clearSelection() {
-        selected = false;
-        hovered  = false;
-        repaint();
-    }
+    public void clearSelection() { selected = false; hovered = false; repaint(); }
+    public Product getProduct()  { return product; }
 
-    public Product getProduct() { return product; }
-
-    @Override
-    public void onPendingItemChanged(PendingCartItem item) {
+    @Override public void onPendingItemChanged(PendingCartItem item) {
         boolean should = item != null && item.getProduct().getCpu().equals(product.getCpu());
         if (should != selected) { selected = should; repaint(); }
     }
 
-    public void updateTheme() {
-        repaint();
-    }
+    public void updateTheme() { repaint(); }
 }

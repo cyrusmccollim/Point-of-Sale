@@ -41,7 +41,7 @@ public class CartSummaryPanel extends JPanel {
         bottomRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         bottomRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
 
-        JLabel totalTextLabel = new JLabel("Total");
+        JLabel totalTextLabel = new JLabel("Cart Total");
         totalTextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 24));
         totalTextLabel.setForeground(ThemeManager.getInstance().getTextColor());
         bottomRow.add(totalTextLabel, BorderLayout.WEST);

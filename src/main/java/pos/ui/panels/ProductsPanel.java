@@ -13,6 +13,7 @@ import javax.swing.border.MatteBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ProductsPanel extends JPanel implements ApplicationState.StateChangeListener {
@@ -51,7 +52,6 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         panel.setBorder(new MatteBorder(0, 0, 2, 0, ThemeManager.getInstance().getSeparatorColor()));
 
-        // Inner padding panel
         JPanel inner = new JPanel(new BorderLayout(8, 0));
         inner.setOpaque(false);
         inner.setBorder(new EmptyBorder(6, 8, 6, 8));
@@ -78,7 +78,7 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
 
     private void loadProducts() {
         productsGrid.removeAll();
-        productCards = new java.util.ArrayList<>();
+        productCards = new ArrayList<>();
         for (Product p : ApplicationState.getInstance().getProducts()) {
             ProductCard card = new ProductCard(p);
             productsGrid.add(card);
@@ -93,24 +93,13 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         productsGrid.removeAll();
         for (ProductCard card : productCards) {
             Product p = card.getProduct();
-            if (q.isEmpty() || p.getName().toLowerCase().contains(q)
-                    || p.getCpu().toLowerCase().contains(q)) {
-                productsGrid.add(card);
-            }
+            if (q.isEmpty() || p.getName().toLowerCase().contains(q) || p.getCpu().toLowerCase().contains(q)) productsGrid.add(card);
         }
         productsGrid.revalidate();
         productsGrid.repaint();
     }
 
-    public void reloadProducts() {
-        searchField.setText("");
-        loadProducts();
-    }
-
-    public void refreshProducts() {
-        ApplicationState.getInstance().initialize();
-        loadProducts();
-    }
+    public void reloadProducts() { searchField.setText(""); loadProducts(); }
 
     public void clearSearch() {
         searchField.setText("");
@@ -122,12 +111,8 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
 
     public void focusSearch() { searchField.requestFocusInWindow(); }
 
-    @Override public void onDepartmentChanged(Department department) {
-        SwingUtilities.invokeLater(this::reloadProducts);
-    }
-    @Override public void onProductsChanged(List<Product> products) {
-        SwingUtilities.invokeLater(this::reloadProducts);
-    }
+    @Override public void onDepartmentChanged(Department department) { SwingUtilities.invokeLater(this::reloadProducts); }
+    @Override public void onProductsChanged(List<Product> products)  { SwingUtilities.invokeLater(this::reloadProducts); }
 
     public void updateTheme() {
         ThemeManager tm = ThemeManager.getInstance();

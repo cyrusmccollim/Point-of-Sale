@@ -11,9 +11,6 @@ import java.awt.print.PrinterException;
 import java.io.FileWriter;
 import java.io.IOException;
 
-/**
- * A dialog for viewing and printing receipts.
- */
 public class ReceiptDialog extends JDialog {
     private final Transaction transaction;
     private final JTextArea receiptArea;
@@ -22,7 +19,6 @@ public class ReceiptDialog extends JDialog {
         super(parent, "Receipt #" + transaction.getId(), true);
         this.transaction = transaction;
         this.receiptArea = new JTextArea();
-
         initialize();
     }
 
@@ -30,13 +26,7 @@ public class ReceiptDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
         setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
 
-        // Receipt content
-        String receiptContent = transaction.generateReceipt(
-                Config.getInstance().getStoreName(),
-                Config.getInstance().getStoreAddress()
-        );
-
-        receiptArea.setText(receiptContent);
+        receiptArea.setText(transaction.generateReceipt(Config.getInstance().getStoreName(), Config.getInstance().getStoreAddress()));
         receiptArea.setEditable(false);
         receiptArea.setFont(new Font("Consolas", Font.PLAIN, 14));
         receiptArea.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
@@ -46,10 +36,8 @@ public class ReceiptDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(receiptArea);
         scrollPane.setPreferredSize(new Dimension(450, 500));
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-
         add(scrollPane, BorderLayout.CENTER);
 
-        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         buttonPanel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
 
@@ -80,10 +68,8 @@ public class ReceiptDialog extends JDialog {
         buttonPanel.add(printButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(closeButton);
-
         add(buttonPanel, BorderLayout.SOUTH);
 
-        // Dialog settings
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setResizable(false);
         pack();
@@ -92,50 +78,26 @@ public class ReceiptDialog extends JDialog {
 
     private void printReceipt() {
         try {
-            boolean printed = receiptArea.print();
-            if (printed) {
-                JOptionPane.showMessageDialog(this,
-                        "Receipt sent to printer.",
-                        "Print Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-            }
+            if (receiptArea.print()) JOptionPane.showMessageDialog(this, "Receipt sent to printer.", "Print Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (PrinterException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Failed to print receipt: " + e.getMessage(),
-                    "Print Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to print receipt: " + e.getMessage(), "Print Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void saveReceipt() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new java.io.File(
-                "receipt_" + transaction.getId() + ".txt"));
-
+        fileChooser.setSelectedFile(new java.io.File("receipt_" + transaction.getId() + ".txt"));
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
                 writer.write(receiptArea.getText());
-                JOptionPane.showMessageDialog(this,
-                        "Receipt saved to: " + fileChooser.getSelectedFile().getAbsolutePath(),
-                        "Save Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Receipt saved to: " + fileChooser.getSelectedFile().getAbsolutePath(), "Save Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this,
-                        "Failed to save receipt: " + e.getMessage(),
-                        "Save Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Failed to save receipt: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    /**
-     * Shows the receipt dialog.
-     *
-     * @param parent The parent frame
-     * @param transaction The transaction to display
-     */
     public static void showReceipt(Frame parent, Transaction transaction) {
-        ReceiptDialog dialog = new ReceiptDialog(parent, transaction);
-        dialog.setVisible(true);
+        new ReceiptDialog(parent, transaction).setVisible(true);
     }
 }

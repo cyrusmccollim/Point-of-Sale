@@ -10,11 +10,9 @@ public class UIFactory {
 
     private UIFactory() {}
 
-    /** Modern flat button with rounded background. */
     public static JButton createButton(String text, Color bg, Color fg, int radius) {
         JButton button = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
@@ -32,20 +30,14 @@ public class UIFactory {
         button.setOpaque(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setBorder(new EmptyBorder(8, 16, 8, 16));
-
         final Color hoverBg = bg.darker();
-        button.getModel().addChangeListener(e -> {
-            button.setBackground(button.getModel().isRollover() ? hoverBg : bg);
-            button.repaint();
-        });
+        button.getModel().addChangeListener(e -> { button.setBackground(button.getModel().isRollover() ? hoverBg : bg); button.repaint(); });
         return button;
     }
 
-    /** Pill badge label with rounded background drawn at paint time. */
     public static JLabel createBadge(String text, Color bg, Color fg) {
         JLabel label = new JLabel(text, SwingConstants.CENTER) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
@@ -62,17 +54,13 @@ public class UIFactory {
         return label;
     }
 
-    /** Card panel with rounded corners and drop shadow, paints bg at paint time. */
     public static JPanel createCard(int arcRadius) {
         JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // Shadow
                 g2.setColor(new Color(0, 0, 0, 15));
                 g2.fillRoundRect(1, 2, getWidth() - 2, getHeight() - 1, arcRadius * 2, arcRadius * 2);
-                // Background
                 g2.setColor(ThemeManager.getInstance().getPanelBackgroundColor());
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 2, arcRadius * 2, arcRadius * 2);
                 g2.dispose();
@@ -83,11 +71,21 @@ public class UIFactory {
         return panel;
     }
 
-    /** Section header label. */
     public static JLabel createSectionHeader(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setFont(new Font("Segoe UI", Font.BOLD, 15));
         label.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
         return label;
+    }
+
+    public static JPanel createPageHeader(String title) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
+        JLabel label = new JLabel(title);
+        label.setFont(ThemeManager.getInstance().getTitleFont());
+        label.setForeground(ThemeManager.getInstance().getTextColor());
+        panel.add(label, BorderLayout.WEST);
+        return panel;
     }
 }

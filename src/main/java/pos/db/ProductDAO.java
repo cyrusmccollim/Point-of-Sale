@@ -59,43 +59,7 @@ public class ProductDAO {
     }
 
     /**
-     * Finds a product by its CPU code.
-     *
-     * @param cpu The product CPU code
-     * @return The product if found, null otherwise
-     */
-    public Product findByCpu(String cpu) {
-        String sql = "SELECT id, name, price, cpu, category, active FROM products WHERE cpu = ?";
-
-        try (Connection conn = dbManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, cpu);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return new Product(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getDouble("price"),
-                        rs.getString("cpu"),
-                        rs.getString("category"),
-                        rs.getBoolean("active")
-                );
-            }
-
-        } catch (SQLException e) {
-            Logger.error("Failed to find product by CPU: " + cpu, e);
-        }
-
-        return null;
-    }
-
-    /**
      * Finds a product by its name (partial match).
-     *
-     * @param name The product name to search for
-     * @return List of matching products
      */
     public List<Product> findByName(String name) {
         List<Product> products = new ArrayList<>();

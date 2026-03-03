@@ -1,5 +1,6 @@
 package pos.ui.panels;
 
+import pos.app.ApplicationState;
 import pos.app.ThemeManager;
 import pos.db.TransactionDAO;
 import pos.model.Transaction;
@@ -14,7 +15,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-public class HistoryPanel extends JPanel {
+public class HistoryPanel extends JPanel implements ApplicationState.StateChangeListener {
     private final String[] columns = {"ID", "Date/Time", "Items", "Total"};
     private final DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
         @Override public boolean isCellEditable(int row, int col) { return false; }
@@ -28,32 +29,16 @@ public class HistoryPanel extends JPanel {
         setBorder(new EmptyBorder(10, 10, 10, 10));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createTablePanel(),  BorderLayout.CENTER);
-        add(createSummaryBar(),  BorderLayout.SOUTH);
+        add(UIFactory.createPageHeader("Transaction History"), BorderLayout.NORTH);
+        add(createTablePanel(), BorderLayout.CENTER);
+        add(createSummaryBar(), BorderLayout.SOUTH);
 
         configureTable();
         loadTransactions();
+        ApplicationState.getInstance().addStateChangeListener(this);
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
-
-        JLabel titleLabel = new JLabel("Transaction History");
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 25));
-        titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
-        panel.add(titleLabel, BorderLayout.WEST);
-
-        JButton refreshButton = UIFactory.createButton("Refresh",
-                ThemeManager.getInstance().getAccentColor(), Color.WHITE, 8);
-        refreshButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        refreshButton.addActionListener(e -> loadTransactions());
-        panel.add(refreshButton, BorderLayout.EAST);
-
-        return panel;
-    }
+    @Override public void onTransactionCompleted() { SwingUtilities.invokeLater(this::loadTransactions); }
 
     private JPanel createTablePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
@@ -65,10 +50,8 @@ public class HistoryPanel extends JPanel {
         scrollPane.setBorder(null);
         panel.add(scrollPane, BorderLayout.CENTER);
 
-        // View receipt button
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         buttonPanel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-
         JButton viewButton = UIFactory.createButton("View Receipt", ThemeManager.getInstance().getAccentColor(), Color.WHITE, 8);
         viewButton.addActionListener(e -> viewSelectedReceipt());
         buttonPanel.add(viewButton);
@@ -96,50 +79,41 @@ public class HistoryPanel extends JPanel {
     }
 
     private void configureTable() {
+        ThemeManager tm = ThemeManager.getInstance();
+
         transactionTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         transactionTable.setRowHeight(36);
         transactionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         transactionTable.setShowGrid(false);
         transactionTable.setIntercellSpacing(new Dimension(0, 0));
 
-        // Header styling
-        transactionTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
-        transactionTable.getTableHeader().setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        transactionTable.getTableHeader().setForeground(ThemeManager.getInstance().getTextColor());
-        transactionTable.getTableHeader().setBorder(new javax.swing.border.MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()));
+        transactionTable.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean focus, int row, int col) {
+                super.getTableCellRendererComponent(t, v, sel, focus, row, col);
+                setBackground(tm.getPanelBackgroundColor());
+                setForeground(tm.getTextColor());
+                setFont(new Font("Segoe UI", Font.BOLD, 13));
+                setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, tm.getBorderColor()), new EmptyBorder(0, 8, 0, 8)));
+                setHorizontalAlignment(col == 0 ? CENTER : col == 3 ? RIGHT : LEFT);
+                return this;
+            }
+        });
 
-        // Column widths
         transactionTable.getColumnModel().getColumn(0).setPreferredWidth(50);
         transactionTable.getColumnModel().getColumn(1).setPreferredWidth(150);
         transactionTable.getColumnModel().getColumn(2).setPreferredWidth(80);
         transactionTable.getColumnModel().getColumn(3).setPreferredWidth(100);
 
-        // Custom cell renderer
         transactionTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-                ThemeManager tm = ThemeManager.getInstance();
-
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 if (!isSelected) {
                     setBackground(row % 2 == 0 ? tm.getPanelBackgroundColor() : tm.getSurfaceColor());
-                    setForeground(tm.getTextColor());
+                    setForeground(col == 0 ? tm.getTextSecondaryColor() : col == 3 ? tm.getOrangeColor() : tm.getTextColor());
                 }
-
-                // ID column: secondary color, centered
-                if (col == 0) {
-                    setHorizontalAlignment(CENTER);
-                    if (!isSelected) setForeground(tm.getTextSecondaryColor());
-                } else if (col == 3) {
-                    // Total column: orange, right-aligned
-                    setHorizontalAlignment(RIGHT);
-                    if (!isSelected) setForeground(tm.getOrangeColor());
-                } else {
-                    setHorizontalAlignment(LEFT);
-                }
-
+                setHorizontalAlignment(col == 0 ? CENTER : col == 3 ? RIGHT : LEFT);
                 setBorder(new EmptyBorder(0, 8, 0, 8));
-                return c;
+                return this;
             }
         });
     }
@@ -150,12 +124,7 @@ public class HistoryPanel extends JPanel {
 
         double totalSum = 0;
         for (Transaction t : transactions) {
-            tableModel.addRow(new Object[]{
-                    t.getId(),
-                    t.getFormattedTimestamp(),
-                    t.getTotalQuantity(),
-                    Utility.formatPrice(t.getTotal())
-            });
+            tableModel.addRow(new Object[]{t.getId(), t.getFormattedTimestamp(), t.getTotalQuantity(), Utility.formatPrice(t.getTotal())});
             totalSum += t.getTotal();
         }
 
@@ -168,10 +137,8 @@ public class HistoryPanel extends JPanel {
 
     private void viewSelectedReceipt() {
         int row = transactionTable.getSelectedRow();
-        if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Please select a transaction to view.", "No Selection", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+        if (row < 0) { JOptionPane.showMessageDialog(this, "Please select a transaction to view.", "No Selection", JOptionPane.INFORMATION_MESSAGE); return; }
+
         int id = (int) tableModel.getValueAt(row, 0);
         Transaction t = TransactionDAO.getInstance().loadTransaction(id);
         if (t != null) {
@@ -180,7 +147,6 @@ public class HistoryPanel extends JPanel {
             textArea.setEditable(false);
             textArea.setFont(new Font("Consolas", Font.PLAIN, 14));
             textArea.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-
             JScrollPane scrollPane = new JScrollPane(textArea);
             scrollPane.setPreferredSize(new Dimension(400, 500));
             JOptionPane.showMessageDialog(this, scrollPane, "Receipt #" + id, JOptionPane.PLAIN_MESSAGE);

@@ -10,10 +10,12 @@ import pos.util.UIFactory;
 import pos.util.Utility;
 
 import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class CurrentItemPanel extends JPanel implements ApplicationState.StateChangeListener {
     private JLabel pricePerLbInlineLabel;
@@ -28,31 +30,32 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     private boolean qtySelected    = false;
     private boolean weightSelected = false;
 
-    // Action buttons shown when a product is selected
     private JButton removeBtn;
     private JButton confirmBtn;
 
     public CurrentItemPanel() {
-        initialize();
-    }
-
-    private void initialize() {
         setLayout(new BorderLayout(6, 4));
-        setBorder(new CompoundBorder(
-                new MatteBorder(0, 0, 0, 0, new Color(0, 0, 0, 40)),
-                new EmptyBorder(8, 14, 14, 14)));
+        setBorder(new EmptyBorder(8, 14, 14, 14));
         setBackground(ThemeManager.getInstance().getOrangeColor());
 
-        // Top row: department badge
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
         departmentBadge = UIFactory.createBadge("Deli", new Color(0, 0, 0, 60), Color.WHITE);
         departmentBadge.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         departmentBadge.setPreferredSize(new Dimension(80, 30));
-        topRow.add(departmentBadge, BorderLayout.WEST); 
+        topRow.add(departmentBadge, BorderLayout.WEST);
+
+        JLabel dateTimeLabel = new JLabel("", SwingConstants.CENTER);
+        dateTimeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        dateTimeLabel.setForeground(new Color(255, 255, 255, 200));
+        topRow.add(dateTimeLabel, BorderLayout.EAST);
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("d MMM YYYY \u2014 h:mm a");
+        dateTimeLabel.setText(LocalDateTime.now().format(dtf));
+        new Timer(1000, e -> dateTimeLabel.setText(LocalDateTime.now().format(dtf))).start();
+
         add(topRow, BorderLayout.NORTH);
 
-        // Center: [X] | name + price/lb | [✓]
         JPanel centerContainer = new JPanel(new BorderLayout(10, 0));
         centerContainer.setBorder(new EmptyBorder(10, 0, 10, 0));
         centerContainer.setOpaque(false);
@@ -66,16 +69,15 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         confirmBtn.setFont(new Font("Segoe UI", Font.BOLD, 22));
         confirmBtn.addActionListener(e -> POSApplication.getInstance().handleConfirm());
 
-        JPanel namePanel = new JPanel(new GridBagLayout()); 
+        JPanel namePanel = new JPanel(new GridBagLayout());
         namePanel.setOpaque(false);
-
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER; 
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
 
-        productNameLabel = new JLabel("Select Product", SwingConstants.CENTER);
+        productNameLabel = new JLabel("No Product Selected", SwingConstants.CENTER);
         productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         productNameLabel.setForeground(Color.WHITE);
-        namePanel.add(productNameLabel, gbc); 
+        namePanel.add(productNameLabel, gbc);
 
         pricePerLbInlineLabel = new JLabel(" ", SwingConstants.CENTER);
         pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 20));
@@ -91,7 +93,6 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
         add(centerContainer, BorderLayout.CENTER);
 
-        // Bottom: 3-metric row (QTY, WT, TOTAL)
         JPanel metricsPanel = new JPanel(new GridLayout(1, 3, 8, 0));
         metricsPanel.setOpaque(false);
 
@@ -99,9 +100,8 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         weightValueLabel = createMetricValue();
         itemTotalLabel   = createMetricValue();
 
-        qtyPanel    = createMetricPanel("QUANTITY", qtyValueLabel, true);
+        qtyPanel    = createMetricPanel("QUANTITY",   qtyValueLabel,    true);
         weightPanel = createMetricPanel("WEIGHT (lb)", weightValueLabel, true);
-
         JPanel totalPanel = createMetricPanel("TOTAL", itemTotalLabel, false);
 
         metricsPanel.add(qtyPanel);
@@ -113,14 +113,12 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         updateDepartment();
     }
 
-    /** Small semi-transparent icon button for the orange panel. */
     private JButton createIconButton(String symbol) {
         JButton btn = new JButton(symbol) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color base = new Color(0, 0, 0, getModel().isRollover() ? 80 : 50);
-                g2.setColor(base);
+                g2.setColor(new Color(0, 0, 0, getModel().isRollover() ? 80 : 50));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 g2.dispose();
                 super.paintComponent(g);
@@ -154,8 +152,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 boolean sel = isSelectedPanel(this);
-                float alpha = sel ? 0.25f : 0.15f;
-                g2.setColor(new Color(1f, 1f, 1f, alpha));
+                g2.setColor(new Color(1f, 1f, 1f, sel ? 0.25f : 0.15f));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 if (sel) {
                     g2.setColor(new Color(1f, 1f, 1f, 0.65f));
@@ -172,16 +169,13 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 15));
         nameLabel.setForeground(new Color(255, 255, 255, 153));
 
-        panel.add(nameLabel, BorderLayout.NORTH);
+        panel.add(nameLabel,  BorderLayout.NORTH);
         panel.add(valueLabel, BorderLayout.CENTER);
 
         if (clickable) {
             panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             panel.addMouseListener(new MouseAdapter() {
-                @Override public void mouseClicked(MouseEvent e) {
-                    if (panel == qtyPanel) selectQty();
-                    else if (panel == weightPanel) selectWeight();
-                }
+                @Override public void mouseClicked(MouseEvent e) { if (panel == qtyPanel) selectQty(); else if (panel == weightPanel) selectWeight(); }
                 @Override public void mouseEntered(MouseEvent e) { panel.repaint(); }
                 @Override public void mouseExited(MouseEvent e)  { panel.repaint(); }
             });
@@ -189,29 +183,22 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         return panel;
     }
 
-    private boolean isSelectedPanel(JPanel p) {
-        return (p == qtyPanel && qtySelected) || (p == weightPanel && weightSelected);
-    }
+    private boolean isSelectedPanel(JPanel p) { return (p == qtyPanel && qtySelected) || (p == weightPanel && weightSelected); }
 
     private void selectQty() {
-        qtySelected = true;
-        weightSelected = false;
-        qtyPanel.repaint();
-        weightPanel.repaint();
+        qtySelected = true; weightSelected = false;
+        qtyPanel.repaint(); weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.QUANTITY);
     }
 
     private void selectWeight() {
-        qtySelected = false;
-        weightSelected = true;
-        qtyPanel.repaint();
-        weightPanel.repaint();
+        qtySelected = false; weightSelected = true;
+        qtyPanel.repaint(); weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.WEIGHT);
     }
 
     public void deselectMetrics() {
-        qtySelected = false;
-        weightSelected = false;
+        qtySelected = false; weightSelected = false;
         if (qtyPanel != null) { qtyPanel.repaint(); weightPanel.repaint(); }
     }
 
@@ -224,11 +211,10 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");
             itemTotalLabel.setText("$0.00");
-            productNameLabel.setText("Select Product");
+            productNameLabel.setText("No Product Selected");
             productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-            pricePerLbInlineLabel.setText("");
-            qtySelected = false;
-            weightSelected = false;
+            pricePerLbInlineLabel.setText(" ");
+            qtySelected = false; weightSelected = false;
             if (qtyPanel != null) { qtyPanel.repaint(); weightPanel.repaint(); }
             removeBtn.setVisible(false);
             confirmBtn.setVisible(false);
@@ -242,52 +228,23 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
             pricePerLbInlineLabel.setText("@ " + Utility.formatPrice(product.getPrice()) + " /lb");
             removeBtn.setVisible(true);
             confirmBtn.setVisible(true);
-
-            if (item.getWeight() == 0) selectWeight();
+            if (item.getWeight() == 0 && !weightSelected && !qtySelected) selectWeight();
         }
         revalidate();
         repaint();
     }
 
-    public void updateQuantity(double quantity) {
-        qtyValueLabel.setText(String.format("%.0f", quantity));
-    }
-
-    public void updateWeight(double weight) {
-        weightValueLabel.setText(String.format("%.2f", weight));
-        PendingCartItem item = ApplicationState.getInstance().getPendingItem();
-        if (item != null) itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
-    }
-
-    public void updateDepartment() {
-        Department dept = ApplicationState.getInstance().getCurrentDepartment();
-        departmentBadge.setText(dept.getDisplayName());
-    }
-
-    public void clearDisplay() {
-        updatePendingItem(null);
-    }
+    public void updateDepartment() { departmentBadge.setText(ApplicationState.getInstance().getCurrentDepartment().getDisplayName()); }
+    public void clearDisplay()     { updatePendingItem(null); }
 
     public boolean isQtySelected()    { return qtySelected; }
     public boolean isWeightSelected() { return weightSelected; }
 
-    @Override public void onPendingItemChanged(PendingCartItem item) {
-        SwingUtilities.invokeLater(() -> updatePendingItem(item));
-    }
-
-    @Override public void onDepartmentChanged(Department department) {
-        SwingUtilities.invokeLater(() -> { updateDepartment(); clearDisplay(); });
-    }
-
+    @Override public void onPendingItemChanged(PendingCartItem item) { SwingUtilities.invokeLater(() -> updatePendingItem(item)); }
+    @Override public void onDepartmentChanged(Department department) { SwingUtilities.invokeLater(() -> { updateDepartment(); clearDisplay(); }); }
     @Override public void onInputModeChanged(ApplicationState.InputMode mode) {
-        if (mode == ApplicationState.InputMode.NONE) {
-            SwingUtilities.invokeLater(this::deselectMetrics);
-        }
+        if (mode == ApplicationState.InputMode.NONE) SwingUtilities.invokeLater(this::deselectMetrics);
     }
 
-    public void updateTheme() {
-        setBackground(ThemeManager.getInstance().getOrangeColor());
-        revalidate();
-        repaint();
-    }
+    public void updateTheme() { setBackground(ThemeManager.getInstance().getOrangeColor()); revalidate(); repaint(); }
 }

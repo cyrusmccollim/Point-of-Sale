@@ -3,7 +3,6 @@ package pos.ui.panels;
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
 import pos.model.CartItem;
-import pos.util.IconManager;
 import pos.util.UIFactory;
 import pos.util.Utility;
 
@@ -13,9 +12,8 @@ import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.util.List;
 
-public class CheckoutPanel extends JPanel {
-    private final JLabel totalLabel     = new JLabel("$0.00");
-    //private final JLabel itemCountLabel = new JLabel("0 items");
+public class CheckoutPanel extends JPanel implements ApplicationState.StateChangeListener {
+    private final JLabel totalLabel = new JLabel("$0.00");
     private JPanel itemsContainer;
 
     public CheckoutPanel() {
@@ -23,31 +21,18 @@ public class CheckoutPanel extends JPanel {
         setBorder(new EmptyBorder(10, 10, 10, 10));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        add(createHeaderPanel(), BorderLayout.NORTH);
-        add(createItemsPanel(), BorderLayout.CENTER);
-        add(createTotalPanel(), BorderLayout.SOUTH);
+        add(UIFactory.createPageHeader("Checkout"), BorderLayout.NORTH);
+        add(createItemsPanel(),  BorderLayout.CENTER);
+        add(createTotalPanel(),  BorderLayout.SOUTH);
+
+        ApplicationState.getInstance().addStateChangeListener(this);
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
-
-        JLabel titleLabel = new JLabel("Checkout");
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 25));
-        titleLabel.setForeground(ThemeManager.getInstance().getTextColor());
-        panel.add(titleLabel, BorderLayout.WEST);
-
-        return panel;
-    }
+    @Override public void onCartChanged() { SwingUtilities.invokeLater(this::updateCheckout); }
 
     private JPanel createItemsPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        headerPanel.setBorder(new EmptyBorder(0, 0, 6, 0));
 
         itemsContainer = new JPanel();
         itemsContainer.setLayout(new BoxLayout(itemsContainer, BoxLayout.Y_AXIS));
@@ -67,7 +52,6 @@ public class CheckoutPanel extends JPanel {
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         panel.setBorder(new EmptyBorder(10, 14, 10, 14));
 
-        // Left: total label + amount stacked
         JPanel totalStack = new JPanel(new GridLayout(2, 1, 0, 2));
         totalStack.setOpaque(false);
         JLabel totalTextLabel = new JLabel("TOTAL");
@@ -81,7 +65,7 @@ public class CheckoutPanel extends JPanel {
 
         JButton processButton = UIFactory.createButton("Print Receipt", ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 10);
         processButton.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        processButton.setPreferredSize(new Dimension(160, 50)); 
+        processButton.setPreferredSize(new Dimension(160, 50));
         processButton.setHorizontalTextPosition(SwingConstants.RIGHT);
         processButton.setIconTextGap(8);
         processButton.addActionListener(e -> pos.app.POSApplication.getInstance().processCheckout());
@@ -118,28 +102,22 @@ public class CheckoutPanel extends JPanel {
 
             itemsContainer.add(emptyPanel);
         } else {
-            for (int i = 0; i < items.size(); i++) {
-                itemsContainer.add(createCheckoutItemPanel(items.get(i), i));
-            }
+            for (int i = 0; i < items.size(); i++) itemsContainer.add(createItemPanel(items.get(i), i));
         }
 
         itemsContainer.add(Box.createVerticalGlue());
         itemsContainer.revalidate();
         itemsContainer.repaint();
-
         totalLabel.setText(Utility.formatPrice(ApplicationState.getInstance().getCart().getTotal()));
     }
 
-    private JPanel createCheckoutItemPanel(CartItem item, int index) {
+    private JPanel createItemPanel(CartItem item, int index) {
+        ThemeManager tm = ThemeManager.getInstance();
+
         JPanel panel = new JPanel(new BorderLayout(8, 4));
-        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()));
+        panel.setBackground(tm.getPanelBackgroundColor());
         panel.setOpaque(true);
-        Insets inner = new Insets(12, 14, 12, 14);
-        panel.setBorder(new javax.swing.border.CompoundBorder(
-                new MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()),
-                new EmptyBorder(inner.top, inner.left, inner.bottom, inner.right)
-        ));
+        panel.setBorder(new javax.swing.border.CompoundBorder(new MatteBorder(0, 0, 1, 0, tm.getBorderColor()), new EmptyBorder(12, 14, 12, 14)));
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
 
         JPanel infoPanel = new JPanel();
@@ -148,16 +126,13 @@ public class CheckoutPanel extends JPanel {
 
         JLabel nameLabel = new JLabel(item.getDisplayName());
         nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 20));
-        nameLabel.setForeground(ThemeManager.getInstance().getTextColor());
+        nameLabel.setForeground(tm.getTextColor());
         infoPanel.add(nameLabel);
 
-        String details = item.isWeighedItem()
-                ? String.format("%.0f x %.2f lb @ %s/lb", item.getQuantity(), item.getWeight(),
-                                Utility.formatPrice(item.getUnitPrice()))
-                : String.format("%.0f @ %s", item.getQuantity(), Utility.formatPrice(item.getUnitPrice()));
+        String details = String.format("%.0f x %.2f lb @ %s/lb", item.getQuantity(), item.getWeight(), Utility.formatPrice(item.getUnitPrice()));
         JLabel detailsLabel = new JLabel(details);
         detailsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
-        detailsLabel.setForeground(ThemeManager.getInstance().getTextSecondaryColor());
+        detailsLabel.setForeground(tm.getTextSecondaryColor());
         infoPanel.add(detailsLabel);
 
         panel.add(infoPanel, BorderLayout.CENTER);
@@ -167,35 +142,32 @@ public class CheckoutPanel extends JPanel {
 
         JLabel priceLabel = new JLabel(Utility.formatPrice(item.getTotalPrice()));
         priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        priceLabel.setForeground(ThemeManager.getInstance().getOrangeColor());
+        priceLabel.setForeground(tm.getOrangeColor());
         rightPanel.add(priceLabel, BorderLayout.CENTER);
 
-        JButton removeBtn = new JButton("✕");
-        removeBtn.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        removeBtn.setPreferredSize(new Dimension(22, 22));
-        removeBtn.setFocusable(false);
-        removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        removeBtn.setBackground(new Color(0xDC2626));
-        removeBtn.setForeground(Color.WHITE);
-        removeBtn.setBorder(new EmptyBorder(2, 2, 2, 2));
-        removeBtn.setOpaque(true);
-        removeBtn.addActionListener(e -> {
-            ApplicationState.getInstance().getCart().removeItem(index);
-            updateCheckout();
-        });
-        removeBtn.getModel().addChangeListener(e ->
-                removeBtn.setBackground(removeBtn.getModel().isRollover()
-                        ? new Color(0xB91C1C) : new Color(0xDC2626)));
+        JButton removeBtn = makeRemoveButton();
+        removeBtn.addActionListener(e -> ApplicationState.getInstance().removeCartItem(index));
         rightPanel.add(removeBtn, BorderLayout.EAST);
 
         panel.add(rightPanel, BorderLayout.EAST);
         return panel;
     }
 
-    public void clearCheckout() {
-        itemsContainer.removeAll();
-        totalLabel.setText("$0.00");
+    private JButton makeRemoveButton() {
+        JButton btn = new JButton("✕");
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        btn.setPreferredSize(new Dimension(22, 22));
+        btn.setFocusable(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setBackground(new Color(0xDC2626));
+        btn.setForeground(Color.WHITE);
+        btn.setBorder(new EmptyBorder(2, 2, 2, 2));
+        btn.setOpaque(true);
+        btn.getModel().addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? new Color(0xB91C1C) : new Color(0xDC2626)));
+        return btn;
     }
+
+    public void clearCheckout() { itemsContainer.removeAll(); totalLabel.setText("$0.00"); }
 
     public void updateTheme() {
         setBackground(ThemeManager.getInstance().getBackgroundColor());

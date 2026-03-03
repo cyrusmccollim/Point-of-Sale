@@ -52,10 +52,6 @@ public class Product {
         return active;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
     @Override
     public String toString() {
         return "Product{" +
