@@ -15,11 +15,15 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     private final List<NumberPadListener> listeners = new ArrayList<>();
     private JTextField displayField;
     private JLabel modeLabel;
+    private JButton doneButton;
 
     public static final String DELETE  = "DELETE";
     public static final String CONFIRM = "CONFIRM";
     public static final String CLEAR   = "CLEAR";
     public static final String DECIMAL = ".";
+
+    private static final Color DONE_ACTIVE   = new Color(0xF07820); // orange
+    private static final Color DONE_DISABLED = new Color(0xD4D4D4);
 
     public NumberPad() {
         initialize();
@@ -27,21 +31,32 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     }
 
     private void initialize() {
-        setLayout(new BorderLayout(5, 6));
-        setBorder(new EmptyBorder(5, 5, 5, 5));
+        setLayout(new BorderLayout(0, 0));
+        //setBorder(new EmptyBorder(5, 5, 5, 5));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
         add(createDisplayPanel(), BorderLayout.NORTH);
         add(createPadPanel(),     BorderLayout.CENTER);
-        add(createActionPanel(),  BorderLayout.SOUTH);
+        add(createDonePanel(),    BorderLayout.SOUTH);
     }
 
     private JPanel createDisplayPanel() {
-        JPanel panel = new JPanel(new BorderLayout(3, 3));
-        panel.setBackground(ThemeManager.getInstance().getSurfaceColor());
+        // Use a solid, clearly visible background so the display area stands out
+        Color displayBg = new Color(0xEAEAF4);
+
+        JPanel panel = new JPanel(new BorderLayout(3, 3)) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(displayBg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+            }
+        };
+        panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        modeLabel = new JLabel("Enter Weight", SwingConstants.CENTER);
+        modeLabel = new JLabel("SELECT PRODUCT", SwingConstants.CENTER);
         modeLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         modeLabel.setForeground(ThemeManager.getInstance().getAccentColor());
         panel.add(modeLabel, BorderLayout.NORTH);
@@ -50,7 +65,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         displayField.setEditable(false);
         displayField.setFont(new Font("Segoe UI", Font.BOLD, 30));
         displayField.setHorizontalAlignment(SwingConstants.RIGHT);
-        displayField.setBackground(ThemeManager.getInstance().getSurfaceColor());
+        displayField.setOpaque(false);
         displayField.setForeground(ThemeManager.getInstance().getTextColor());
         displayField.setBorder(new EmptyBorder(2, 6, 2, 6));
         displayField.setFocusable(false);
@@ -68,22 +83,28 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         return panel;
     }
 
-    private JPanel createActionPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 8, 0));
+    private JPanel createDonePanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 1, 0, 0));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
         panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        JButton deleteBtn = createActionButton("Del", IconManager.DELETE,
-                ThemeManager.getInstance().getSurfaceColor(),
-                ThemeManager.getInstance().getTextSecondaryColor(), 14, false);
-        deleteBtn.addActionListener(e -> handleDelete());
-        panel.add(deleteBtn);
+        doneButton = new JButton("Done");
+        doneButton.setFocusable(false);
+        doneButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        doneButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        doneButton.setIcon(IconManager.getInstance().getIcon(IconManager.CHECK, 16, 16));
+        doneButton.setHorizontalTextPosition(SwingConstants.RIGHT);
+        doneButton.setIconTextGap(6);
+        doneButton.setBorder(new EmptyBorder(12, 14, 12, 14));
+        doneButton.setMinimumSize(new Dimension(0, 52));
+        doneButton.setPreferredSize(new Dimension(0, 52));
+        doneButton.setEnabled(false);
+        doneButton.setBackground(DONE_DISABLED);
+        doneButton.setForeground(Color.WHITE);
+        doneButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
 
-        JButton confirmBtn = createActionButton("Add", IconManager.CHECK,
-                ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 14, true);
-        confirmBtn.addActionListener(e -> handleConfirm());
-        panel.add(confirmBtn);
-
+        doneButton.addActionListener(e -> handleDone());
+        panel.add(doneButton);
         return panel;
     }
 
@@ -91,10 +112,10 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         boolean isClear   = key.equals(CLEAR);
         boolean isDecimal = key.equals(DECIMAL);
 
-        String  label   = isClear ? "C" : key;
-        Color   bg      = isClear ? new Color(0xDC2626) : ThemeManager.getInstance().getPanelBackgroundColor();
-        Color   fg      = isClear ? Color.WHITE : ThemeManager.getInstance().getTextColor();
-        int     fontSize = (isDecimal || isClear) ? 16 : 22;
+        String label    = isClear ? "C" : key;
+        Color  bg       = isClear ? new Color(0xDC2626) : ThemeManager.getInstance().getPanelBackgroundColor();
+        Color  fg       = isClear ? Color.WHITE : ThemeManager.getInstance().getTextColor();
+        int    fontSize = (isDecimal || isClear) ? 16 : 22;
 
         JButton button = new JButton(label);
         button.setFocusable(false);
@@ -114,32 +135,13 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         return button;
     }
 
-    private JButton createActionButton(String text, String iconName,
-                                       Color bg, Color fg, int fontSize, boolean isBold) {
-        JButton button = new JButton(text);
-        button.setFocusable(false);
-        button.setFont(new Font("Segoe UI", isBold ? Font.BOLD : Font.PLAIN, fontSize));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        button.setBackground(bg);
-        button.setForeground(fg);
-        button.setIcon(IconManager.getInstance().getIcon(iconName, 16, 16));
-        button.setHorizontalTextPosition(SwingConstants.RIGHT);
-        button.setIconTextGap(6);
-        button.setBorder(new EmptyBorder(12, 14, 12, 14));
-        button.setMinimumSize(new Dimension(0, 52));
-        button.setPreferredSize(new Dimension(0, 52));
-
-        Color hoverBg = bg.darker();
-        button.getModel().addChangeListener(e -> {
-            button.setBackground(button.getModel().isRollover() ? hoverBg : bg);
-        });
-        return button;
-    }
-
     private void handleButtonClick(String key) {
         String current = ApplicationState.getInstance().getCurrentInput();
         switch (key) {
-            case CLEAR -> { ApplicationState.getInstance().clearInput(); updateDisplay(); }
+            case CLEAR -> {
+                ApplicationState.getInstance().clearInput();
+                updateDisplay();
+            }
             case DECIMAL -> {
                 if (!current.contains(".")) {
                     ApplicationState.getInstance().appendInput(".");
@@ -156,15 +158,13 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         }
     }
 
-    private void handleDelete() {
-        if (!ApplicationState.getInstance().getCurrentInput().isEmpty()) {
-            ApplicationState.getInstance().deleteLastInputChar();
-            updateDisplay();
-            applyInputToPendingItem();
-        } else {
-            ApplicationState.getInstance().clearPendingItem();
-            notifyListeners(DELETE);
-        }
+    private void handleDone() {
+        // Apply the current input then deselect the field
+        applyInputToPendingItem();
+        ApplicationState state = ApplicationState.getInstance();
+        state.setInputMode(ApplicationState.InputMode.NONE);
+        state.clearInput();
+        updateDisplay();
     }
 
     private void handleConfirm() {
@@ -187,6 +187,14 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     private void updateDisplay() {
         String input = ApplicationState.getInstance().getCurrentInput();
         displayField.setText(input.isEmpty() ? "" : input);
+        updateDoneState(input);
+    }
+
+    private void updateDoneState(String input) {
+        boolean hasInput = !input.isEmpty();
+        doneButton.setEnabled(hasInput);
+        doneButton.setBackground(hasInput ? DONE_ACTIVE : DONE_DISABLED);
+        doneButton.setCursor(new Cursor(hasInput ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
     }
 
     public void setModeText(String mode) {
@@ -201,6 +209,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
 
     public void clearDisplay() {
         displayField.setText("");
+        updateDoneState("");
         updateModeFromState();
     }
 
@@ -211,8 +220,10 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     private void updateModeFromState() {
         ApplicationState state = ApplicationState.getInstance();
         if (state.hasPendingItem()) {
-            setModeText(state.getInputMode() == ApplicationState.InputMode.QUANTITY
-                    ? "Enter Quantity" : "Enter Weight");
+            ApplicationState.InputMode mode = state.getInputMode();
+            if (mode == ApplicationState.InputMode.QUANTITY) setModeText("Enter Quantity");
+            else if (mode == ApplicationState.InputMode.WEIGHT) setModeText("Enter Weight");
+            else setModeText("Select Field");
         } else {
             setModeText("Select Product");
         }
@@ -225,14 +236,30 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     @Override public void onPendingItemChanged(PendingCartItem item) {
         SwingUtilities.invokeLater(() -> {
             if (item != null) updateModeFromState();
-            else setModeText("Select Product");
+            else {
+                setModeText("Select Product");
+                // Clear input when product is removed
+                displayField.setText("");
+                updateDoneState("");
+            }
+        });
+    }
+
+    @Override public void onInputModeChanged(ApplicationState.InputMode mode) {
+        SwingUtilities.invokeLater(() -> {
+            if (mode == ApplicationState.InputMode.QUANTITY) setModeText("Enter Quantity");
+            else if (mode == ApplicationState.InputMode.WEIGHT) setModeText("Enter Weight");
+            else if (mode == ApplicationState.InputMode.NONE) {
+                setModeText("Select Field");
+                displayField.setText("");
+                updateDoneState("");
+            }
         });
     }
 
     public void updateTheme() {
         ThemeManager tm = ThemeManager.getInstance();
         setBackground(tm.getBackgroundColor());
-        displayField.setBackground(tm.getSurfaceColor());
         displayField.setForeground(tm.getTextColor());
         modeLabel.setForeground(tm.getAccentColor());
         SwingUtilities.updateComponentTreeUI(this);

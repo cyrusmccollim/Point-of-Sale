@@ -1,6 +1,7 @@
 package pos.ui.components;
 
 import pos.app.ApplicationState;
+import pos.app.POSApplication;
 import pos.app.ThemeManager;
 import pos.model.Department;
 import pos.model.PendingCartItem;
@@ -10,6 +11,7 @@ import pos.util.Utility;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -24,8 +26,12 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
     private JPanel qtyPanel;
     private JPanel weightPanel;
-    private boolean qtySelected = false;
+    private boolean qtySelected    = false;
     private boolean weightSelected = false;
+
+    // Action buttons shown when a product is selected
+    private JButton removeBtn;
+    private JButton confirmBtn;
 
     public CurrentItemPanel() {
         initialize();
@@ -33,32 +39,50 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
     private void initialize() {
         setLayout(new BorderLayout(6, 4));
-        setBorder(new EmptyBorder(8, 14, 8, 14));
+        setBorder(new javax.swing.border.CompoundBorder(
+                new MatteBorder(0, 0, 1, 0, new Color(0, 0, 0, 40)),
+                new EmptyBorder(8, 14, 8, 14)));
         setBackground(ThemeManager.getInstance().getOrangeColor());
 
         // Top row: department badge
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
-
         departmentBadge = UIFactory.createBadge("Deli", new Color(0, 0, 0, 60), Color.WHITE);
         topRow.add(departmentBadge, BorderLayout.WEST);
         add(topRow, BorderLayout.NORTH);
 
-        // Center: product name + price/lb inline
-        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 0, 1));
-        centerPanel.setOpaque(false);
+        // Center: [X] | name + price/lb | [✓]
+        JPanel centerContainer = new JPanel(new BorderLayout(10, 0));
+        centerContainer.setOpaque(false);
+
+        removeBtn = createIconButton("✕");
+        removeBtn.addActionListener(e -> ApplicationState.getInstance().clearPendingItem());
+
+        confirmBtn = createIconButton("✓");
+        confirmBtn.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        confirmBtn.addActionListener(e -> POSApplication.getInstance().handleConfirm());
+
+        JPanel namePanel = new JPanel(new GridLayout(2, 1, 0, 1));
+        namePanel.setOpaque(false);
 
         productNameLabel = new JLabel("Select a product", SwingConstants.CENTER);
-        productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         productNameLabel.setForeground(Color.WHITE);
-        centerPanel.add(productNameLabel);
+        namePanel.add(productNameLabel);
 
         pricePerLbInlineLabel = new JLabel("", SwingConstants.CENTER);
-        pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        pricePerLbInlineLabel.setFont(new Font("Segoe UI", Font.ITALIC, 16));
         pricePerLbInlineLabel.setForeground(new Color(255, 255, 255, 200));
-        centerPanel.add(pricePerLbInlineLabel);
+        namePanel.add(pricePerLbInlineLabel);
 
-        add(centerPanel, BorderLayout.CENTER);
+        centerContainer.add(removeBtn,  BorderLayout.WEST);
+        centerContainer.add(namePanel,   BorderLayout.CENTER);
+        centerContainer.add(confirmBtn,  BorderLayout.EAST);
+
+        removeBtn.setVisible(false);
+        confirmBtn.setVisible(false);
+
+        add(centerContainer, BorderLayout.CENTER);
 
         // Bottom: 3-metric row (QTY, WT, TOTAL)
         JPanel metricsPanel = new JPanel(new GridLayout(1, 3, 8, 0));
@@ -81,6 +105,34 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         updateDepartment();
     }
 
+    /** Small semi-transparent icon button for the orange panel. */
+    private JButton createIconButton(String symbol) {
+        JButton btn = new JButton(symbol) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color base = new Color(0, 0, 0, getModel().isRollover() ? 80 : 50);
+                g2.setColor(base);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        btn.setForeground(Color.WHITE);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(44, 44));
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.repaint(); }
+            @Override public void mouseExited(MouseEvent e)  { btn.repaint(); }
+        });
+        return btn;
+    }
+
     private JLabel createMetricValue() {
         JLabel label = new JLabel("--", SwingConstants.CENTER);
         label.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -90,8 +142,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
     private JPanel createMetricPanel(String name, JLabel valueLabel, boolean clickable) {
         JPanel panel = new JPanel(new BorderLayout(0, 2)) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 boolean sel = isSelectedPanel(this);
@@ -150,25 +201,35 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.WEIGHT);
     }
 
+    public void deselectMetrics() {
+        qtySelected = false;
+        weightSelected = false;
+        if (qtyPanel != null) { qtyPanel.repaint(); weightPanel.repaint(); }
+    }
+
     public void updatePendingItem(PendingCartItem item) {
         if (item == null) {
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");
             itemTotalLabel.setText("$0.00");
             productNameLabel.setText("Select a product");
-            productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            productNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 22));
             pricePerLbInlineLabel.setText("");
             qtySelected = false;
             weightSelected = false;
             if (qtyPanel != null) { qtyPanel.repaint(); weightPanel.repaint(); }
+            removeBtn.setVisible(false);
+            confirmBtn.setVisible(false);
         } else {
             Product product = item.getProduct();
             qtyValueLabel.setText(String.format("%.0f", item.getQuantity()));
             weightValueLabel.setText(String.format("%.2f", item.getWeight()));
             itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
             productNameLabel.setText(product.getName());
-            productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
             pricePerLbInlineLabel.setText("@ " + Utility.formatPrice(product.getPrice()) + " /lb");
+            removeBtn.setVisible(true);
+            confirmBtn.setVisible(true);
 
             if (item.getWeight() == 0) selectWeight();
         }
@@ -204,6 +265,12 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
 
     @Override public void onDepartmentChanged(Department department) {
         SwingUtilities.invokeLater(() -> { updateDepartment(); clearDisplay(); });
+    }
+
+    @Override public void onInputModeChanged(ApplicationState.InputMode mode) {
+        if (mode == ApplicationState.InputMode.NONE) {
+            SwingUtilities.invokeLater(this::deselectMetrics);
+        }
     }
 
     public void updateTheme() {

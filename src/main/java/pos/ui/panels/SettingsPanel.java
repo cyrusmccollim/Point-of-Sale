@@ -14,7 +14,6 @@ public class SettingsPanel extends JPanel {
     private final JTextField storeNameField    = new JTextField(30);
     private final JTextField storeAddressField = new JTextField(30);
     private final JTextField receiptFolderField= new JTextField(30);
-    private final JToggleButton darkModeToggle = new JToggleButton("Dark Mode");
     private final JComboBox<Department> departmentComboBox = new JComboBox<>(Department.values());
 
     public SettingsPanel() {
@@ -76,7 +75,7 @@ public class SettingsPanel extends JPanel {
         JPanel card = UIFactory.createCard(12);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
 
         JLabel title = UIFactory.createSectionHeader("Appearance");
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -84,26 +83,6 @@ public class SettingsPanel extends JPanel {
         card.add(Box.createVerticalStrut(12));
 
         card.add(createFieldRow("Department", buildDeptCombo()));
-        card.add(Box.createVerticalStrut(12));
-
-        // Dark mode toggle
-        JPanel toggleRow = new JPanel(new BorderLayout(8, 0));
-        toggleRow.setOpaque(false);
-        toggleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        toggleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel themeLabel = new JLabel("Theme");
-        themeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        themeLabel.setForeground(ThemeManager.getInstance().getTextColor());
-        toggleRow.add(themeLabel, BorderLayout.WEST);
-
-        darkModeToggle.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        darkModeToggle.putClientProperty("JButton.buttonType", "roundRect");
-        darkModeToggle.addActionListener(e ->
-                ThemeManager.getInstance().setDarkMode(darkModeToggle.isSelected()));
-        toggleRow.add(darkModeToggle, BorderLayout.CENTER);
-
-        card.add(toggleRow);
         return card;
     }
 
@@ -162,7 +141,6 @@ public class SettingsPanel extends JPanel {
         storeNameField.setText(cfg.getStoreName());
         storeAddressField.setText(cfg.getStoreAddress());
         receiptFolderField.setText(cfg.getReceiptFolder());
-        darkModeToggle.setSelected(ThemeManager.getInstance().isDarkMode());
         departmentComboBox.setSelectedItem(cfg.getDepartment());
 
         // Style fields
@@ -183,7 +161,6 @@ public class SettingsPanel extends JPanel {
         cfg.setStoreName(storeNameField.getText().trim());
         cfg.setStoreAddress(storeAddressField.getText().trim());
         cfg.setReceiptFolder(receiptFolderField.getText().trim());
-        cfg.setTheme(darkModeToggle.isSelected() ? "dark" : "light");
 
         Department dept = (Department) departmentComboBox.getSelectedItem();
         if (dept != null) {
@@ -197,17 +174,15 @@ public class SettingsPanel extends JPanel {
     }
 
     private void resetSettings() {
-        storeNameField.setText("POS Store");
+        storeNameField.setText("Store Name");
         storeAddressField.setText("123 Main Street");
         receiptFolderField.setText("receipts");
-        darkModeToggle.setSelected(false);
         departmentComboBox.setSelectedItem(Department.DELI);
     }
 
     public void updateTheme() {
         ThemeManager tm = ThemeManager.getInstance();
         setBackground(tm.getBackgroundColor());
-        darkModeToggle.setSelected(tm.isDarkMode());
         departmentComboBox.setBackground(tm.getPanelBackgroundColor());
         revalidate();
         repaint();

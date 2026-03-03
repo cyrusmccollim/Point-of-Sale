@@ -21,8 +21,8 @@ public class CartPanel extends JPanel {
     private final List<CartItemCard> itemCards = new ArrayList<>();
 
     public CartPanel() {
-        setLayout(new BorderLayout(3, 3));
-        setBorder(new EmptyBorder(3, 3, 3, 3));
+        setLayout(new BorderLayout(10, 10));
+        setBorder(new EmptyBorder(10, 10, 10, 10));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
         add(createHeaderPanel(), BorderLayout.NORTH);

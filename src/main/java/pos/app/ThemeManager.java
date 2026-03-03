@@ -22,6 +22,7 @@ public class ThemeManager {
     public static final Color LIGHT_TEXT           = new Color(0x18181B);
     public static final Color LIGHT_TEXT_SECONDARY = new Color(0x71717A);
     public static final Color LIGHT_BORDER         = new Color(0xE4E4E7);
+    public static final Color LIGHT_SEPARATOR      = new Color(0xB8B8C4);
 
     // Dark theme
     public static final Color DARK_BG              = new Color(0x18181B);
@@ -91,28 +92,13 @@ public class ThemeManager {
         UIManager.put("Table.selectionForeground", text);
     }
 
-    public void toggleTheme() {
-        darkMode = !darkMode;
-        Config.getInstance().setTheme(darkMode ? "dark" : "light");
-        Config.getInstance().save();
-        applyTheme();
-    }
-
-    public void setDarkMode(boolean dark) {
-        if (this.darkMode != dark) {
-            this.darkMode = dark;
-            Config.getInstance().setTheme(dark ? "dark" : "light");
-            Config.getInstance().save();
-            applyTheme();
-        }
-    }
-
     public boolean isDarkMode() { return darkMode; }
 
     public Color getAccentColor()         { return darkMode ? DARK_ACCENT        : LIGHT_ACCENT; }
     public Color getAccentHoverColor()    { return darkMode ? DARK_ACCENT_HOVER   : LIGHT_ACCENT_HOVER; }
     public Color getSurfaceColor()        { return darkMode ? DARK_SURFACE        : LIGHT_SURFACE; }
     public Color getBorderColor()         { return darkMode ? DARK_BORDER         : LIGHT_BORDER; }
+    public Color getSeparatorColor()      { return darkMode ? DARK_BORDER         : LIGHT_SEPARATOR; }
     public Color getSecondaryColor()      { return getBorderColor(); }   // backward compat
     public Color getBackgroundColor()     { return darkMode ? DARK_BG             : LIGHT_BG; }
     public Color getPanelBackgroundColor(){ return darkMode ? DARK_PANEL_BG       : LIGHT_PANEL_BG; }

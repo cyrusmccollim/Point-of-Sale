@@ -204,6 +204,7 @@ public class ApplicationState {
     public void setInputMode(InputMode mode) {
         this.inputMode = mode;
         this.currentInput = "";
+        for (StateChangeListener l : listeners) l.onInputModeChanged(mode);
     }
 
     // Convenience methods
@@ -320,5 +321,6 @@ public class ApplicationState {
         default void onPendingItemChanged(PendingCartItem item) {}
         default void onDepartmentChanged(Department department) {}
         default void onProductsChanged(List<Product> products) {}
+        default void onInputModeChanged(InputMode mode) {}
     }
 }

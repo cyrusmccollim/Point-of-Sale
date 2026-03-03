@@ -22,7 +22,7 @@ public class CartSummaryPanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         setBorder(new CompoundBorder(
-                new MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()),
+                new MatteBorder(0, 0, 2, 0, ThemeManager.getInstance().getSeparatorColor()),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
@@ -70,7 +70,7 @@ public class CartSummaryPanel extends JPanel {
         ThemeManager tm = ThemeManager.getInstance();
         setBackground(tm.getPanelBackgroundColor());
         setBorder(new CompoundBorder(
-                new MatteBorder(0, 0, 1, 0, tm.getBorderColor()),
+                new MatteBorder(0, 0, 2, 0, tm.getSeparatorColor()),
                 new EmptyBorder(12, 16, 12, 16)
         ));
         itemCountLabel.setForeground(tm.getTextSecondaryColor());

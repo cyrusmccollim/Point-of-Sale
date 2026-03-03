@@ -23,38 +23,36 @@ import pos.util.Utility;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Main application window for the POS System.
- * Fixed window size at half of screen dimensions.
- */
 public class POSApplication extends JFrame implements ApplicationState.StateChangeListener {
     private static POSApplication instance;
 
-    private ProductsPanel productsPanel;
+    private ProductsPanel   productsPanel;
     private CartSummaryPanel cartSummaryPanel;
-    private CheckoutPanel checkoutPanel;
-    private HistoryPanel historyPanel;
-    private SettingsPanel settingsPanel;
+    private CheckoutPanel   checkoutPanel;
+    private HistoryPanel    historyPanel;
+    private SettingsPanel   settingsPanel;
     private CurrentItemPanel currentItemPanel;
-    private NumberPad numberPad;
+    private NumberPad       numberPad;
 
     private JPanel mainContent;
     private CardLayout cardLayout;
-    private static final String PRODUCTS_VIEW = "PRODUCTS";
-    private static final String CHECKOUT_VIEW = "CHECKOUT";
-    private static final String HISTORY_VIEW = "HISTORY";
-    private static final String SETTINGS_VIEW = "SETTINGS";
+    private JToggleButton[] navButtons;
+
+    private static final String PRODUCTS_VIEW  = "PRODUCTS";
+    private static final String CHECKOUT_VIEW  = "CHECKOUT";
+    private static final String HISTORY_VIEW   = "HISTORY";
+    private static final String SETTINGS_VIEW  = "SETTINGS";
 
     private String currentView = PRODUCTS_VIEW;
 
-    public static POSApplication getInstance() {
-        return instance;
-    }
+    public static POSApplication getInstance() { return instance; }
 
     public POSApplication() {
         instance = this;
@@ -80,13 +78,8 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
     private void configureWindow() {
         setTitle(Config.getInstance().getStoreName() + " - POS System");
 
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-
-        // Fixed size: 3/4 of screen width and height
-        int windowWidth = (int) (screenSize.width * 0.75);
-        int windowHeight = (int) (screenSize.height * 0.75);
-
-        setSize(windowWidth, windowHeight);
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        setSize((int)(screen.width * 0.75), (int)(screen.height * 0.75));
         setResizable(false);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -100,118 +93,159 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
 
     private void createComponents() {
         currentItemPanel = new CurrentItemPanel();
-        productsPanel = new ProductsPanel();
+        productsPanel    = new ProductsPanel();
         cartSummaryPanel = new CartSummaryPanel();
-        checkoutPanel = new CheckoutPanel();
-        historyPanel = new HistoryPanel();
-        settingsPanel = new SettingsPanel();
-        numberPad = new NumberPad();
+        checkoutPanel    = new CheckoutPanel();
+        historyPanel     = new HistoryPanel();
+        settingsPanel    = new SettingsPanel();
+        numberPad        = new NumberPad();
     }
 
     private void layoutComponents() {
         setLayout(new BorderLayout(0, 0));
 
-        // Top: Current item panel
         add(currentItemPanel, BorderLayout.NORTH);
 
-        // Center: Main content with card layout
-        cardLayout = new CardLayout();
-        mainContent = new JPanel(cardLayout);
+        cardLayout   = new CardLayout();
+        mainContent  = new JPanel(cardLayout);
         mainContent.setBackground(ThemeManager.getInstance().getBackgroundColor());
 
-        mainContent.add(createProductsView(), PRODUCTS_VIEW);
-        mainContent.add(createCheckoutView(), CHECKOUT_VIEW);
-        mainContent.add(historyPanel, HISTORY_VIEW);
+        mainContent.add(createSimpleView(productsPanel), PRODUCTS_VIEW);
+        mainContent.add(createSimpleView(checkoutPanel), CHECKOUT_VIEW);
+        mainContent.add(historyPanel,  HISTORY_VIEW);
         mainContent.add(settingsPanel, SETTINGS_VIEW);
-
         add(mainContent, BorderLayout.CENTER);
 
-        // Right: Number pad and cart (25% of width)
-        JPanel rightPanel = createRightPanel();
-        add(rightPanel, BorderLayout.EAST);
-
-        // Bottom: Navigation
-        JPanel navPanel = createNavigationPanel();
-        add(navPanel, BorderLayout.SOUTH);
+        add(createRightPanel(),      BorderLayout.EAST);
+        add(createNavigationPanel(), BorderLayout.SOUTH);
     }
 
-    private JPanel createProductsView() {
+    private JPanel createSimpleView(JPanel inner) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        panel.add(productsPanel, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel createCheckoutView() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        panel.add(checkoutPanel, BorderLayout.CENTER);
+        panel.add(inner, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createRightPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        panel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.setBorder(new javax.swing.border.CompoundBorder(
+                new MatteBorder(0, 2, 0, 0, ThemeManager.getInstance().getSeparatorColor()),
+                new EmptyBorder(8, 8, 8, 8)));
         panel.setPreferredSize(new Dimension(320, 0));
-
-        // Cart summary at top
         panel.add(cartSummaryPanel, BorderLayout.NORTH);
-
-        // Number pad takes the rest
-        panel.add(numberPad, BorderLayout.CENTER);
-
+        panel.add(numberPad,        BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createNavigationPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
-        panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        JPanel outer = new JPanel(new BorderLayout());
+        outer.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+        outer.setBorder(new MatteBorder(2, 0, 0, 0, ThemeManager.getInstance().getSeparatorColor()));
+        outer.setPreferredSize(new Dimension(0, 52));
 
-        String[] buttonLabels = {"Products", "Checkout", "History", "Settings"};
-        String[] views = {PRODUCTS_VIEW, CHECKOUT_VIEW, HISTORY_VIEW, SETTINGS_VIEW};
+        String[] labels = {"Products", "Checkout", "History", "Settings"};
+        String[] views  = {PRODUCTS_VIEW, CHECKOUT_VIEW, HISTORY_VIEW, SETTINGS_VIEW};
 
-        for (int i = 0; i < buttonLabels.length; i++) {
-            JButton button = new JButton(buttonLabels[i]);
-            button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            button.setBackground(ThemeManager.getInstance().getSecondaryColor());
-            button.setForeground(ThemeManager.getInstance().getTextColor());
-            button.setFocusable(false);
-            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            button.setPreferredSize(new Dimension(120, 36));
+        JPanel tabsPanel = new JPanel(new GridLayout(1, 4, 0, 0));
+        tabsPanel.setOpaque(false);
 
+        navButtons = new JToggleButton[labels.length];
+        ButtonGroup group = new ButtonGroup();
+
+        for (int i = 0; i < labels.length; i++) {
             final String view = views[i];
-            button.addActionListener(e -> switchView(view));
-            panel.add(button);
+            JToggleButton tab = buildNavTab(labels[i]);
+            navButtons[i] = tab;
+            group.add(tab);
+            tab.addActionListener(e -> switchView(view));
+            tabsPanel.add(tab);
         }
+        navButtons[0].setSelected(true);
+        syncTabColors();
 
-        return panel;
+        outer.add(tabsPanel, BorderLayout.CENTER);
+        return outer;
+    }
+
+    private JToggleButton buildNavTab(String text) {
+        JToggleButton btn = new JToggleButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Subtle hover fill
+                if (getModel().isRollover() && !isSelected()) {
+                    Color border = ThemeManager.getInstance().getBorderColor();
+                    g2.setColor(new Color(border.getRed(), border.getGreen(), border.getBlue(), 80));
+                    g2.fillRect(0, 0, getWidth(), getHeight());
+                }
+                g2.dispose();
+
+                super.paintComponent(g);
+
+                // Accent underline for selected state
+                if (isSelected()) {
+                    Graphics2D g3 = (Graphics2D) g.create();
+                    g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g3.setColor(ThemeManager.getInstance().getAccentColor());
+                    g3.setStroke(new BasicStroke(2.5f));
+                    int pad = 16;
+                    g3.drawLine(pad, getHeight() - 3, getWidth() - pad, getHeight() - 3);
+                    g3.dispose();
+                }
+            }
+        };
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(110, 52));
+        btn.setMinimumSize(new Dimension(110, 52));
+
+        btn.getModel().addChangeListener(e -> {
+            ThemeManager tm = ThemeManager.getInstance();
+            btn.setForeground(btn.isSelected() ? tm.getAccentColor() : tm.getTextSecondaryColor());
+            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 13));
+            btn.repaint();
+        });
+
+        ThemeManager tm = ThemeManager.getInstance();
+        btn.setForeground(tm.getTextSecondaryColor());
+        btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        return btn;
+    }
+
+    private void syncTabColors() {
+        if (navButtons == null) return;
+        ThemeManager tm = ThemeManager.getInstance();
+        for (JToggleButton btn : navButtons) {
+            btn.setForeground(btn.isSelected() ? tm.getAccentColor() : tm.getTextSecondaryColor());
+            btn.setFont(new Font("Segoe UI", btn.isSelected() ? Font.BOLD : Font.PLAIN, 13));
+        }
     }
 
     private void registerListeners() {
         numberPad.addNumberPadListener(this::handleNumberPadAction);
-        registerKeyboardShortcut();
+        registerKeyboardShortcuts();
     }
 
-    private void registerKeyboardShortcut() {
+    private void registerKeyboardShortcuts() {
         getRootPane().registerKeyboardAction(e -> productsPanel.focusSearch(),
-                KeyStroke.getKeyStroke("ctrl F"),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
-
+                KeyStroke.getKeyStroke("ctrl F"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> clearInput(),
-                KeyStroke.getKeyStroke("ESCAPE"),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
-
+                KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> handleConfirm(),
-                KeyStroke.getKeyStroke("ENTER"),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
+                KeyStroke.getKeyStroke("ENTER"), JComponent.WHEN_IN_FOCUSED_WINDOW);
     }
 
     private void handleNumberPadAction(String key) {
         switch (key) {
             case NumberPad.CONFIRM -> handleConfirm();
-            case NumberPad.DELETE -> handleDelete();
+            case NumberPad.DELETE  -> handleDelete();
             default -> updateCurrentItemDisplay();
         }
     }
@@ -225,39 +259,29 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         }
     }
 
-    private void handleConfirm() {
+    public void handleConfirm() {
         ApplicationState state = ApplicationState.getInstance();
 
         if (state.hasPendingItem()) {
-            PendingCartItem pendingItem = state.getPendingItem();
+            PendingCartItem pending = state.getPendingItem();
 
-            if (pendingItem.getWeight() <= 0) {
+            if (pending.getWeight() <= 0) {
                 JOptionPane.showMessageDialog(this,
                         "Please click on 'WT (lb)' and enter a weight before adding to cart.",
-                        "Weight Required",
-                        JOptionPane.WARNING_MESSAGE);
+                        "Weight Required", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            Product product = pendingItem.getProduct();
-            String message = String.format(
+            Product product = pending.getProduct();
+            String msg = String.format(
                     "<html><div style='text-align: center;'>" +
-                            "<b>%s</b><br><br>" +
-                            "Quantity: %.0f<br>" +
-                            "Weight: %.2f lb<br>" +
-                            "Price: %s/lb<br><br>" +
-                            "<b>Item Total: %s</b>" +
-                            "</div></html>",
-                    product.getName(),
-                    pendingItem.getQuantity(),
-                    pendingItem.getWeight(),
+                    "<b>%s</b><br><br>Quantity: %.0f<br>Weight: %.2f lb<br>" +
+                    "Price: %s/lb<br><br><b>Item Total: %s</b></div></html>",
+                    product.getName(), pending.getQuantity(), pending.getWeight(),
                     Utility.formatPrice(product.getPrice()),
-                    Utility.formatPrice(pendingItem.getTotalPrice())
-            );
+                    Utility.formatPrice(pending.getTotalPrice()));
 
-            boolean confirmed = ConfirmationDialog.confirm(this, "Add to Cart?", message);
-
-            if (confirmed) {
+            if (ConfirmationDialog.confirm(this, "Add to Cart?", msg)) {
                 state.confirmPendingItem();
                 cartSummaryPanel.updateSummary();
                 currentItemPanel.clearDisplay();
@@ -275,13 +299,11 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
 
     private void handleDelete() {
         ApplicationState state = ApplicationState.getInstance();
-
         if (!state.getCurrentInput().isEmpty()) {
             state.clearInput();
             numberPad.clearDisplay();
             return;
         }
-
         if (state.hasPendingItem()) {
             state.clearPendingItem();
             currentItemPanel.clearDisplay();
@@ -289,54 +311,35 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         }
     }
 
-    private void processCheckout() {
+    public void processCheckout() {
         Cart cart = ApplicationState.getInstance().getCart();
-
         if (cart.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot checkout with an empty cart.",
-                    "Empty Cart",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot checkout with an empty cart.",
+                    "Empty Cart", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        boolean confirmed = ConfirmationDialog.confirm(this,
-                "Confirm Sale",
+        if (!ConfirmationDialog.confirm(this, "Confirm Sale",
                 String.format("Process this transaction and print receipt?<br><br><b>Total: %s</b>",
-                        Utility.formatPrice(cart.getTotal())));
-
-        if (!confirmed) {
-            return;
-        }
+                        Utility.formatPrice(cart.getTotal())))) return;
 
         List<TransactionItem> items = new ArrayList<>();
         cart.getItems().forEach(item -> items.add(new TransactionItem(item)));
 
         Transaction transaction = new Transaction(0, LocalDateTime.now(), items, cart.getTotal());
-
         int transactionId = TransactionDAO.getInstance().saveTransaction(transaction);
+
         if (transactionId > 0) {
-            // Create a proper transaction object with the ID
             transaction = new Transaction(transactionId, transaction.getTimestamp(),
                     transaction.getItems(), transaction.getTotal());
 
-            // Generate PDF receipt
             String pdfPath = TransactionDAO.getInstance().saveReceiptPdf(
-                    transaction,
-                    Config.getInstance().getStoreName(),
-                    Config.getInstance().getStoreAddress()
-            );
-
+                    transaction, Config.getInstance().getStoreName(),
+                    Config.getInstance().getStoreAddress());
             if (pdfPath != null) {
                 transaction.setReceiptPath(pdfPath);
                 Logger.info("PDF receipt saved to: " + pdfPath);
             }
-
-            // Also generate text receipt for preview
-            String receiptContent = transaction.generateReceipt(
-                    Config.getInstance().getStoreName(),
-                    Config.getInstance().getStoreAddress()
-            );
 
             ReceiptDialog.showReceipt(this, transaction);
 
@@ -348,10 +351,8 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
             Logger.info("Transaction #" + transactionId + " completed successfully");
             switchView(PRODUCTS_VIEW);
         } else {
-            JOptionPane.showMessageDialog(this,
-                    "Failed to process transaction. Please try again.",
-                    "Transaction Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to process transaction. Please try again.",
+                    "Transaction Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -359,36 +360,35 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         currentView = view;
         cardLayout.show(mainContent, view);
 
-        if (view.equals(CHECKOUT_VIEW)) {
-            checkoutPanel.updateCheckout();
-        } else if (view.equals(PRODUCTS_VIEW)) {
-            productsPanel.clearSearch();
+        // Sync nav button selection
+        if (navButtons != null) {
+            String[] views = {PRODUCTS_VIEW, CHECKOUT_VIEW, HISTORY_VIEW, SETTINGS_VIEW};
+            for (int i = 0; i < views.length; i++) {
+                navButtons[i].setSelected(views[i].equals(view));
+            }
+            syncTabColors();
         }
+
+        if (view.equals(CHECKOUT_VIEW)) checkoutPanel.updateCheckout();
+        else if (view.equals(PRODUCTS_VIEW)) productsPanel.clearSearch();
 
         setTitle(Config.getInstance().getStoreName() + " - " +
                 view.substring(0, 1).toUpperCase() + view.substring(1).toLowerCase());
     }
 
-    private void showProductsView() {
-        switchView(PRODUCTS_VIEW);
-    }
+    private void showProductsView() { switchView(PRODUCTS_VIEW); }
 
     private void clearInput() {
         ApplicationState state = ApplicationState.getInstance();
-
         if (state.hasPendingItem()) {
             state.clearPendingItem();
             currentItemPanel.clearDisplay();
         }
-
         state.clearInput();
         numberPad.clearDisplay();
     }
 
-    @Override
-    public void onPendingItemChanged(PendingCartItem item) {
-        // NumberPad handles its own mode updates
-    }
+    @Override public void onPendingItemChanged(PendingCartItem item) {}
 
     public void updateTheme() {
         ThemeManager.getInstance().applyTheme();
@@ -399,6 +399,7 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         settingsPanel.updateTheme();
         numberPad.updateTheme();
         currentItemPanel.updateTheme();
+        syncTabColors();
         SwingUtilities.updateComponentTreeUI(this);
     }
 }

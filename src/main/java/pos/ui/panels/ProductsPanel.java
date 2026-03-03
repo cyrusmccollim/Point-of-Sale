@@ -22,19 +22,23 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
 
     public ProductsPanel() {
         setLayout(new BorderLayout(0, 0));
-        setBorder(new EmptyBorder(8, 8, 8, 8));
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
         add(createSearchPanel(), BorderLayout.NORTH);
 
         productsGrid = new JPanel(new GridLayout(0, 4, 10, 10));
         productsGrid.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        productsGrid.setBorder(new EmptyBorder(8, 0, 0, 0));
+        productsGrid.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        JScrollPane scrollPane = new JScrollPane(productsGrid);
+        JPanel gridWrapper = new JPanel(new BorderLayout());
+        gridWrapper.setBackground(ThemeManager.getInstance().getBackgroundColor());
+        gridWrapper.add(productsGrid, BorderLayout.NORTH);
+
+        JScrollPane scrollPane = new JScrollPane(gridWrapper);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(ThemeManager.getInstance().getBackgroundColor());
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         add(scrollPane, BorderLayout.CENTER);
 
@@ -45,7 +49,7 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
     private JPanel createSearchPanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 0));
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
-        panel.setBorder(new MatteBorder(0, 0, 1, 0, ThemeManager.getInstance().getBorderColor()));
+        panel.setBorder(new MatteBorder(0, 0, 2, 0, ThemeManager.getInstance().getSeparatorColor()));
 
         // Inner padding panel
         JPanel inner = new JPanel(new BorderLayout(8, 0));

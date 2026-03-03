@@ -14,7 +14,6 @@ import java.awt.*;
 import java.util.List;
 
 public class CheckoutPanel extends JPanel {
-    private final JTextArea receiptArea = new JTextArea();
     private final JLabel totalLabel     = new JLabel("$0.00");
     private final JLabel itemCountLabel = new JLabel("0 items");
     private JPanel itemsContainer;
@@ -25,16 +24,7 @@ public class CheckoutPanel extends JPanel {
         setBackground(ThemeManager.getInstance().getBackgroundColor());
 
         add(createHeaderPanel(), BorderLayout.NORTH);
-
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setDividerLocation(350);
-        splitPane.setResizeWeight(0.45);
-        splitPane.setBackground(ThemeManager.getInstance().getBackgroundColor());
-        splitPane.setBorder(null);
-        splitPane.setLeftComponent(createItemsPanel());
-        splitPane.setRightComponent(createReceiptPanel());
-        add(splitPane, BorderLayout.CENTER);
-
+        add(createItemsPanel(), BorderLayout.CENTER);
         add(createTotalPanel(), BorderLayout.SOUTH);
     }
 
@@ -87,31 +77,6 @@ public class CheckoutPanel extends JPanel {
         return panel;
     }
 
-    private JPanel createReceiptPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
-
-        JLabel previewLabel = new JLabel("Receipt Preview");
-        previewLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        previewLabel.setForeground(ThemeManager.getInstance().getTextColor());
-        previewLabel.setBorder(new EmptyBorder(0, 0, 6, 0));
-        panel.add(previewLabel, BorderLayout.NORTH);
-
-        receiptArea.setEditable(false);
-        receiptArea.setFont(new Font("Consolas", Font.PLAIN, 11));
-        receiptArea.setBackground(new Color(0xFFFEF0));
-        receiptArea.setForeground(new Color(0x18181B));
-        receiptArea.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        JScrollPane scrollPane = new JScrollPane(receiptArea);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(null);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        return panel;
-    }
-
     private JPanel createTotalPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 0));
         panel.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
@@ -130,18 +95,15 @@ public class CheckoutPanel extends JPanel {
         panel.add(totalStack, BorderLayout.WEST);
 
         // Right: Process Sale button
-        JButton processButton = UIFactory.createButton("Process Sale",
+        JButton processButton = UIFactory.createButton("Print Receipt",
                 ThemeManager.getInstance().getOrangeColor(), Color.WHITE, 10);
         processButton.setFont(new Font("Segoe UI", Font.BOLD, 15));
         processButton.setPreferredSize(new Dimension(160, 44));
         processButton.setIcon(IconManager.getInstance().getIcon(IconManager.PRINT, 16, 16));
         processButton.setHorizontalTextPosition(SwingConstants.RIGHT);
         processButton.setIconTextGap(8);
-        processButton.addActionListener(e -> {
-            java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(
-                    new java.awt.event.ActionEvent(this,
-                            java.awt.event.ActionEvent.ACTION_PERFORMED, "confirm"));
-        });
+        processButton.addActionListener(e ->
+                pos.app.POSApplication.getInstance().processCheckout());
         panel.add(processButton, BorderLayout.EAST);
 
         return panel;
@@ -182,7 +144,6 @@ public class CheckoutPanel extends JPanel {
         itemsContainer.revalidate();
         itemsContainer.repaint();
 
-        updateReceiptPreview();
         totalLabel.setText(Utility.formatPrice(ApplicationState.getInstance().getCart().getTotal()));
     }
 
@@ -248,54 +209,11 @@ public class CheckoutPanel extends JPanel {
         return panel;
     }
 
-    private void updateReceiptPreview() {
-        StringBuilder receipt = new StringBuilder();
-        String sep = "================================\n";
-        receipt.append(sep);
-        receipt.append(String.format("        %s\n", centerText("RECEIPT", 32)));
-        receipt.append(sep).append("\n");
-
-        List<CartItem> items = ApplicationState.getInstance().getCart().getItems();
-        if (items.isEmpty()) {
-            receipt.append("    No items in cart.\n\n");
-        } else {
-            for (CartItem item : items) {
-                String name = truncate(item.getDisplayName(), 16);
-                if (item.isWeighedItem()) {
-                    receipt.append(String.format("%-16s\n", name));
-                    receipt.append(String.format("  %d x %.2f lb @ $%.2f",
-                            (int) item.getQuantity(), item.getWeight(), item.getUnitPrice()));
-                    receipt.append(String.format("%10s\n", Utility.formatPrice(item.getTotalPrice())));
-                } else {
-                    receipt.append(String.format("%-16s", name));
-                    receipt.append(String.format("%10s\n", Utility.formatPrice(item.getTotalPrice())));
-                }
-            }
-        }
-        receipt.append("\n--------------------------------\n");
-        receipt.append(String.format("%-20s%12s\n", "TOTAL:",
-                Utility.formatPrice(ApplicationState.getInstance().getCart().getTotal())));
-        receipt.append(sep).append("\n        Thank You!\n").append(sep);
-        receiptArea.setText(receipt.toString());
-    }
-
-    private String centerText(String text, int width) {
-        if (text.length() >= width) return text;
-        return " ".repeat((width - text.length()) / 2) + text;
-    }
-
-    private String truncate(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max - 2) + "..";
-    }
-
     public void clearCheckout() {
         itemsContainer.removeAll();
-        receiptArea.setText("");
         totalLabel.setText("$0.00");
         itemCountLabel.setText("0 items");
     }
-
-    public String getReceiptText() { return receiptArea.getText(); }
 
     public void updateTheme() {
         setBackground(ThemeManager.getInstance().getBackgroundColor());
