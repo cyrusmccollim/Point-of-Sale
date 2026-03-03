@@ -14,6 +14,7 @@ public class Config {
     private static final String DEFAULT_RECEIPT_FOLDER = "receipts";
     private static final String DEFAULT_DB_PATH       = "pos_database.db";
     private static final String DEFAULT_DEPARTMENT    = "DELI";
+    private static final String DEFAULT_USE_KG        = "false";
 
     private final Properties properties;
 
@@ -42,6 +43,7 @@ public class Config {
         if (!properties.containsKey("receipt.folder")) properties.setProperty("receipt.folder", DEFAULT_RECEIPT_FOLDER);
         if (!properties.containsKey("db.path"))        properties.setProperty("db.path",        DEFAULT_DB_PATH);
         if (!properties.containsKey("department"))     properties.setProperty("department",     DEFAULT_DEPARTMENT);
+        if (!properties.containsKey("use.kg"))         properties.setProperty("use.kg",         DEFAULT_USE_KG);
     }
 
     public void save() {
@@ -69,4 +71,7 @@ public class Config {
     }
 
     public void setDepartment(Department department) { properties.setProperty("department", department.name()); }
+
+    public boolean isUseKg() { return Boolean.parseBoolean(properties.getProperty("use.kg", DEFAULT_USE_KG)); }
+    public void setUseKg(boolean useKg) { properties.setProperty("use.kg", String.valueOf(useKg)); }
 }

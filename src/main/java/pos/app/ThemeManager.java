@@ -54,7 +54,7 @@ public class ThemeManager {
         UIManager.put("Component.focusWidth", 1);
         UIManager.put("ScrollBar.thumbArc",   999);
         UIManager.put("ScrollBar.width",      8);
-        UIManager.put("Table.selectionBackground", new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 30));
+        UIManager.put("Table.selectionBackground", new Color(0xD4D4D8));
         UIManager.put("Table.selectionForeground", text);
     }
 

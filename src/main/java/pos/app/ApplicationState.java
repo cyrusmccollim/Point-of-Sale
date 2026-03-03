@@ -98,7 +98,7 @@ public class ApplicationState {
     public InputMode getInputMode() { return inputMode; }
 
     public void setInputMode(InputMode mode) {
-        this.inputMode    = mode;
+        this.inputMode = mode;
         this.currentInput = "";
         for (StateChangeListener l : listeners) l.onInputModeChanged(mode);
     }
@@ -147,7 +147,7 @@ public class ApplicationState {
     public void clearPendingItem() {
         this.pendingItem     = null;
         this.selectedProduct = null;
-        clearInput();
+        setInputMode(InputMode.NONE); // always resets mode + clears input + fires onInputModeChanged
         notifyPendingItemChanged();
     }
 

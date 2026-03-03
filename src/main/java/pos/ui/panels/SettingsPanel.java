@@ -15,6 +15,7 @@ public class SettingsPanel extends JPanel {
     private final JTextField storeAddressField  = new JTextField(30);
     private final JTextField receiptFolderField = new JTextField(30);
     private final JComboBox<Department> departmentComboBox = new JComboBox<>(Department.values());
+    private final JComboBox<String> weightUnitComboBox = new JComboBox<>(new String[]{"lb — pounds", "kg — kilograms"});
 
     public SettingsPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -59,13 +60,15 @@ public class SettingsPanel extends JPanel {
         JPanel card = UIFactory.createCard(12);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 
         JLabel title = UIFactory.createSectionHeader("Appearance");
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
         card.add(Box.createVerticalStrut(12));
         card.add(createFieldRow("Department", buildDeptCombo()));
+        card.add(Box.createVerticalStrut(12));
+        card.add(createFieldRow("Weight Unit", buildWeightUnitCombo()));
         return card;
     }
 
@@ -98,6 +101,13 @@ public class SettingsPanel extends JPanel {
         return departmentComboBox;
     }
 
+    private JComboBox<String> buildWeightUnitCombo() {
+        weightUnitComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        weightUnitComboBox.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
+        weightUnitComboBox.setForeground(ThemeManager.getInstance().getTextColor());
+        return weightUnitComboBox;
+    }
+
     private JPanel createButtonPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         panel.setBackground(ThemeManager.getInstance().getBackgroundColor());
@@ -121,6 +131,7 @@ public class SettingsPanel extends JPanel {
         storeAddressField.setText(cfg.getStoreAddress());
         receiptFolderField.setText(cfg.getReceiptFolder());
         departmentComboBox.setSelectedItem(cfg.getDepartment());
+        weightUnitComboBox.setSelectedIndex(cfg.isUseKg() ? 1 : 0);
         styleField(storeNameField);
         styleField(storeAddressField);
         styleField(receiptFolderField);
@@ -140,7 +151,9 @@ public class SettingsPanel extends JPanel {
         cfg.setReceiptFolder(receiptFolderField.getText().trim());
         Department dept = (Department) departmentComboBox.getSelectedItem();
         if (dept != null) { cfg.setDepartment(dept); ApplicationState.getInstance().setCurrentDepartment(dept); }
+        cfg.setUseKg(weightUnitComboBox.getSelectedIndex() == 1);
         cfg.save();
+        pos.app.POSApplication.getInstance().refreshWeightUnit();
         JOptionPane.showMessageDialog(this, "Settings saved successfully.", "Settings Saved", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -149,12 +162,14 @@ public class SettingsPanel extends JPanel {
         storeAddressField.setText("123 Main Street");
         receiptFolderField.setText("receipts");
         departmentComboBox.setSelectedItem(Department.DELI);
+        weightUnitComboBox.setSelectedIndex(0);
     }
 
     public void updateTheme() {
         ThemeManager tm = ThemeManager.getInstance();
         setBackground(tm.getBackgroundColor());
         departmentComboBox.setBackground(tm.getPanelBackgroundColor());
+        weightUnitComboBox.setBackground(tm.getPanelBackgroundColor());
         revalidate();
         repaint();
     }

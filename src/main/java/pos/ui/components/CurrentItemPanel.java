@@ -24,6 +24,8 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     private JLabel itemTotalLabel;
     private JLabel productNameLabel;
     private JLabel departmentBadge;
+    // The name label inside the weight metric panel, so we can update it when the unit changes
+    private JLabel weightNameLabel;
 
     private JPanel qtyPanel;
     private JPanel weightPanel;
@@ -74,7 +76,7 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
 
-        productNameLabel = new JLabel("No Product Selected", SwingConstants.CENTER);
+        productNameLabel = new JLabel("[No Product Selected]", SwingConstants.CENTER);
         productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         productNameLabel.setForeground(Color.WHITE);
         namePanel.add(productNameLabel, gbc);
@@ -100,9 +102,13 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         weightValueLabel = createMetricValue();
         itemTotalLabel   = createMetricValue();
 
-        qtyPanel    = createMetricPanel("QUANTITY",   qtyValueLabel,    true);
-        weightPanel = createMetricPanel("WEIGHT (lb)", weightValueLabel, true);
-        JPanel totalPanel = createMetricPanel("TOTAL", itemTotalLabel, false);
+        qtyValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        weightValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        itemTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+
+        qtyPanel    = createMetricPanel("QUANTITY", qtyValueLabel, true);
+        weightPanel = createMetricPanel("WEIGHT (" + Utility.getWeightUnit() + ")", weightValueLabel, true);
+        JPanel totalPanel = createMetricPanel("ITEM TOTAL", itemTotalLabel, false);
 
         metricsPanel.add(qtyPanel);
         metricsPanel.add(weightPanel);
@@ -147,6 +153,13 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     }
 
     private JPanel createMetricPanel(String name, JLabel valueLabel, boolean clickable) {
+        JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
+        nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 15));
+        nameLabel.setForeground(new Color(255, 255, 255, 153));
+
+        // Store the weight panel's name label so we can update it live
+        if (name.startsWith("WEIGHT")) weightNameLabel = nameLabel;
+
         JPanel panel = new JPanel(new BorderLayout(0, 2)) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -165,10 +178,6 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(3, 8, 3, 8));
 
-        JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("Segoe UI", clickable ? Font.BOLD : Font.PLAIN, 15));
-        nameLabel.setForeground(new Color(255, 255, 255, 153));
-
         panel.add(nameLabel,  BorderLayout.NORTH);
         panel.add(valueLabel, BorderLayout.CENTER);
 
@@ -186,12 +195,14 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     private boolean isSelectedPanel(JPanel p) { return (p == qtyPanel && qtySelected) || (p == weightPanel && weightSelected); }
 
     private void selectQty() {
+        if (!ApplicationState.getInstance().hasPendingItem()) return;
         qtySelected = true; weightSelected = false;
         qtyPanel.repaint(); weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.QUANTITY);
     }
 
     private void selectWeight() {
+        if (!ApplicationState.getInstance().hasPendingItem()) return;
         qtySelected = false; weightSelected = true;
         qtyPanel.repaint(); weightPanel.repaint();
         ApplicationState.getInstance().setInputMode(ApplicationState.InputMode.WEIGHT);
@@ -203,15 +214,11 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
     }
 
     public void updatePendingItem(PendingCartItem item) {
-        qtyValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        weightValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        itemTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-
         if (item == null) {
             qtyValueLabel.setText("--");
             weightValueLabel.setText("--");
             itemTotalLabel.setText("$0.00");
-            productNameLabel.setText("No Product Selected");
+            productNameLabel.setText("[No Product Selected]");
             productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
             pricePerLbInlineLabel.setText(" ");
             qtySelected = false; weightSelected = false;
@@ -221,17 +228,24 @@ public class CurrentItemPanel extends JPanel implements ApplicationState.StateCh
         } else {
             Product product = item.getProduct();
             qtyValueLabel.setText(String.format("%.0f", item.getQuantity()));
-            weightValueLabel.setText(String.format("%.2f", item.getWeight()));
+            weightValueLabel.setText(String.format("%.2f", Utility.lbsToDisplayUnit(item.getWeight())));
             itemTotalLabel.setText(Utility.formatPrice(item.getTotalPrice()));
             productNameLabel.setText(product.getName());
             productNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-            pricePerLbInlineLabel.setText("@ " + Utility.formatPrice(product.getPrice()) + " /lb");
+            pricePerLbInlineLabel.setText("@ " + Utility.formatUnitPrice(product.getPrice()));
             removeBtn.setVisible(true);
             confirmBtn.setVisible(true);
             if (item.getWeight() == 0 && !weightSelected && !qtySelected) selectWeight();
         }
         revalidate();
         repaint();
+    }
+
+    /** Called when the weight unit setting changes so the panel label stays accurate. */
+    public void refreshWeightUnitLabel() {
+        if (weightNameLabel != null) {
+            weightNameLabel.setText("WEIGHT (" + Utility.getWeightUnit() + ")");
+        }
     }
 
     public void updateDepartment() { departmentBadge.setText(ApplicationState.getInstance().getCurrentDepartment().getDisplayName()); }

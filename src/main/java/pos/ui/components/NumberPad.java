@@ -3,6 +3,7 @@ package pos.ui.components;
 import pos.app.ApplicationState;
 import pos.app.ThemeManager;
 import pos.model.PendingCartItem;
+import pos.util.Utility;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -14,6 +15,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     private JLabel displayField;
     private JLabel modeLabel;
     private JButton doneButton;
+    private final java.util.List<JButton> padButtons = new java.util.ArrayList<>();
 
     public static final String CLEAR   = "CLEAR";
     public static final String DECIMAL = ".";
@@ -28,6 +30,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         add(createPadPanel(),     BorderLayout.CENTER);
         add(createDonePanel(),    BorderLayout.SOUTH);
         ApplicationState.getInstance().addStateChangeListener(this);
+        setPadActive(false); // greyed out until a field is selected
     }
 
     private JPanel createDisplayPanel() {
@@ -71,10 +74,11 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         doneButton.setBorder(new EmptyBorder(12, 14, 12, 14));
         doneButton.setMinimumSize(new Dimension(0, 52));
         doneButton.setPreferredSize(new Dimension(0, 52));
-        doneButton.setEnabled(false);
-        doneButton.setBackground(DONE_DISABLED);
-        doneButton.setForeground(Color.WHITE);
+        
+        doneButton.setBackground(Color.WHITE);
+        doneButton.setForeground(DONE_DISABLED); 
         doneButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+
         doneButton.addActionListener(e -> handleDone());
         panel.add(doneButton);
         return panel;
@@ -94,17 +98,28 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         button.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         Color hoverBg = isClear ? new Color(0xB91C1C) : ThemeManager.getInstance().getBorderColor();
-        button.getModel().addChangeListener(e -> button.setBackground(button.getModel().isRollover() ? hoverBg : bg));
+        // Gate hover on a client property so it is fully suppressed when the pad is inactive
+        button.putClientProperty("pad.active", Boolean.FALSE);
+        button.getModel().addChangeListener(e -> {
+            if (Boolean.TRUE.equals(button.getClientProperty("pad.active"))) {
+                button.setBackground(button.getModel().isRollover() ? hoverBg : bg);
+            }
+        });
         button.addActionListener(e -> handleButtonClick(key));
+        padButtons.add(button);
         return button;
     }
 
     private void handleButtonClick(String key) {
+        ApplicationState.InputMode mode = ApplicationState.getInstance().getInputMode();
+        // Keypad is locked unless a field (Qty or Weight) is actively selected
+        if (mode != ApplicationState.InputMode.QUANTITY && mode != ApplicationState.InputMode.WEIGHT) return;
+
         String current = ApplicationState.getInstance().getCurrentInput();
         switch (key) {
-            case CLEAR  -> { ApplicationState.getInstance().clearInput(); updateDisplay(); }
+            case CLEAR   -> { ApplicationState.getInstance().clearInput(); updateDisplay(); }
             case DECIMAL -> { if (!current.contains(".")) { ApplicationState.getInstance().appendInput("."); updateDisplay(); } }
-            default     -> { if (current.length() < 8) { ApplicationState.getInstance().appendInput(key); updateDisplay(); applyInputToPendingItem(); } }
+            default      -> { if (current.length() < 8) { ApplicationState.getInstance().appendInput(key); updateDisplay(); applyInputToPendingItem(); } }
         }
     }
 
@@ -121,7 +136,7 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         double val = state.getCurrentInputAsDouble();
         if (state.hasPendingItem()) {
             if (state.getInputMode() == ApplicationState.InputMode.QUANTITY) state.updatePendingQuantity(val);
-            else if (state.getInputMode() == ApplicationState.InputMode.WEIGHT) state.updatePendingWeight(val);
+            else if (state.getInputMode() == ApplicationState.InputMode.WEIGHT) state.updatePendingWeight(Utility.inputToLbs(val));
         }
     }
 
@@ -132,10 +147,22 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
     }
 
     private void updateDoneState(String input) {
-        boolean hasInput = !input.isEmpty();
-        doneButton.setEnabled(hasInput);
-        doneButton.setBackground(hasInput ? DONE_ACTIVE : DONE_DISABLED);
-        doneButton.setCursor(new Cursor(hasInput ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        ApplicationState.InputMode mode = ApplicationState.getInstance().getInputMode();
+        boolean modeSelected = (mode == ApplicationState.InputMode.QUANTITY || mode == ApplicationState.InputMode.WEIGHT);
+        boolean active = !input.isEmpty() && modeSelected;
+        
+        // Track state via ClientProperty (like your pad buttons do)
+        doneButton.putClientProperty("btn.active", active);
+        
+        if (active) {
+            doneButton.setBackground(DONE_ACTIVE);
+            doneButton.setForeground(Color.WHITE);
+            doneButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        } else {
+            doneButton.setBackground(Color.WHITE);
+            doneButton.setForeground(DONE_DISABLED); // Exact hex match to keypad
+            doneButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+        }
     }
 
     public void setModeText(String mode) {
@@ -159,26 +186,57 @@ public class NumberPad extends JPanel implements ApplicationState.StateChangeLis
         if (state.hasPendingItem()) {
             ApplicationState.InputMode mode = state.getInputMode();
             if (mode == ApplicationState.InputMode.QUANTITY)       setModeText("Enter Quantity");
-            else if (mode == ApplicationState.InputMode.WEIGHT)    setModeText("Enter Weight");
-            else                                                    setModeText("Select Field");
+            else if (mode == ApplicationState.InputMode.WEIGHT)    setModeText("Enter Weight (" + Utility.getWeightUnit() + ")");
+            else                                                   setModeText("Select Field");
         } else {
-            setModeText("No Product Selected");
+            setModeText("[No Product Selected]");
         }
     }
 
     @Override public void onPendingItemChanged(PendingCartItem item) {
         SwingUtilities.invokeLater(() -> {
             if (item != null) updateModeFromState();
-            else { setModeText("No Product Selected"); displayField.setText(" "); updateDoneState(""); }
+            else { setModeText("[No Product Selected]"); displayField.setText(" "); updateDoneState(""); }
         });
+    }
+
+    private void setPadActive(boolean active) {
+        Color fg     = active ? ThemeManager.getInstance().getTextColor() : DONE_DISABLED;
+        Cursor cursor = new Cursor(active ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR);
+        Color baseBg = ThemeManager.getInstance().getPanelBackgroundColor();
+        for (JButton b : padButtons) {
+            b.putClientProperty("pad.active", active);
+            b.setForeground(fg);
+            b.setCursor(cursor);
+            b.setBackground(baseBg); // reset in case hover left a tinted background
+        }
     }
 
     @Override public void onInputModeChanged(ApplicationState.InputMode mode) {
         SwingUtilities.invokeLater(() -> {
-            if (mode == ApplicationState.InputMode.QUANTITY)    setModeText("Enter Quantity");
-            else if (mode == ApplicationState.InputMode.WEIGHT) setModeText("Enter Weight");
-            else if (mode == ApplicationState.InputMode.NONE)   { setModeText("Select Field"); displayField.setText(" "); updateDoneState(""); }
+            if (mode == ApplicationState.InputMode.QUANTITY) {
+                setModeText("Enter Quantity");
+                setPadActive(true);
+                updateDoneState(ApplicationState.getInstance().getCurrentInput());
+            } else if (mode == ApplicationState.InputMode.WEIGHT) {
+                setModeText("Enter Weight (" + Utility.getWeightUnit() + ")");
+                setPadActive(true);
+                updateDoneState(ApplicationState.getInstance().getCurrentInput());
+            } else if (mode == ApplicationState.InputMode.NONE) {
+                setModeText("Select Field");
+                setPadActive(false);
+                displayField.setText(" ");
+                updateDoneState("");
+            }
         });
+    }
+
+    /** Called after the weight unit setting changes; re-renders the mode label if showing weight. */
+    public void refreshWeightUnitLabel() {
+        ApplicationState state = ApplicationState.getInstance();
+        if (state.getInputMode() == ApplicationState.InputMode.WEIGHT) {
+            setModeText("Enter Weight (" + Utility.getWeightUnit() + ")");
+        }
     }
 
     public void updateTheme() {

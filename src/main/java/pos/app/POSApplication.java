@@ -211,21 +211,15 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
             PendingCartItem pending = state.getPendingItem();
 
             if (pending.getWeight() <= 0) {
-                JOptionPane.showMessageDialog(this, "Please click on 'WEIGHT (lb)' and enter a weight before adding to cart.", "Weight Required", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Please click on 'WEIGHT (" + pos.util.Utility.getWeightUnit() + ")' and enter a weight before adding to cart.", "Weight Required", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            Product product = pending.getProduct();
-            String msg = String.format("<html><div style='text-align: center;'><b>%s</b><br><br>Quantity: %.0f<br>Weight: %.2f lb<br>Price: %s/lb<br><br><b>Item Total: %s</b></div></html>",
-                    product.getName(), pending.getQuantity(), pending.getWeight(), Utility.formatPrice(product.getPrice()), Utility.formatPrice(pending.getTotalPrice()));
-
-            if (ConfirmationDialog.confirm(this, "Add to Cart?", msg)) {
-                state.confirmPendingItem();
-                cartSummaryPanel.updateSummary();
-                currentItemPanel.clearDisplay();
-                numberPad.clearDisplay();
-                Logger.info("Added " + product.getName() + " to cart");
-            }
+            state.confirmPendingItem();
+            cartSummaryPanel.updateSummary();
+            currentItemPanel.clearDisplay();
+            numberPad.clearDisplay();
+            Logger.info("Added " + pending.getProduct().getName() + " to cart");
         } else {
             if (currentView.equals(CHECKOUT_VIEW)) processCheckout();
             else if (!state.getCart().isEmpty()) switchView(CHECKOUT_VIEW);
@@ -301,5 +295,11 @@ public class POSApplication extends JFrame implements ApplicationState.StateChan
         currentItemPanel.updateTheme();
         syncTabColors();
         SwingUtilities.updateComponentTreeUI(this);
+    }
+
+    /** Called after the weight unit setting changes so labels update immediately. */
+    public void refreshWeightUnit() {
+        currentItemPanel.refreshWeightUnitLabel();
+        numberPad.refreshWeightUnitLabel();
     }
 }

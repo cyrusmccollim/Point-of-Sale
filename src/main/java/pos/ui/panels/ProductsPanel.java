@@ -13,6 +13,8 @@ import javax.swing.border.MatteBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +22,7 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
     private final JPanel productsGrid;
     private final JTextField searchField = new JTextField();
     private List<ProductCard> productCards;
+    private JScrollPane scrollPane;
 
     public ProductsPanel() {
         setLayout(new BorderLayout(0, 0));
@@ -35,16 +38,59 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         gridWrapper.setBackground(ThemeManager.getInstance().getBackgroundColor());
         gridWrapper.add(productsGrid, BorderLayout.NORTH);
 
-        JScrollPane scrollPane = new JScrollPane(gridWrapper);
+        scrollPane = new JScrollPane(gridWrapper);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        // Keep scrollbar functional but invisible (zero width)
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(ThemeManager.getInstance().getBackgroundColor());
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(30);
+        scrollPane.setWheelScrollingEnabled(true);
+
+        // Drag-to-scroll: installed on the viewport itself so it fires regardless of
+        // which child component the cursor is over. We dispatch wheel events from
+        // product cards up to the scroll pane so everything works uniformly.
+        final int[] dragStartY = {0};
+        final boolean[] dragging = {false};
+        MouseAdapter dragScroller = new MouseAdapter() {
+            @Override public void mousePressed(MouseEvent e) {
+                dragStartY[0] = e.getYOnScreen();
+                dragging[0] = false;
+            }
+            @Override public void mouseDragged(MouseEvent e) {
+                dragging[0] = true;
+                int delta = dragStartY[0] - e.getYOnScreen();
+                dragStartY[0] = e.getYOnScreen();
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                bar.setValue(bar.getValue() + delta * 2);
+            }
+        };
+        scrollPane.getViewport().addMouseListener(dragScroller);
+        scrollPane.getViewport().addMouseMotionListener(dragScroller);
+
+        // Forward mouse wheel events from every product card to the scroll pane
+        // so scrolling works even when the cursor is directly over a card.
+        installWheelForwarding(productsGrid, scrollPane);
+
         add(scrollPane, BorderLayout.CENTER);
 
         ApplicationState.getInstance().addStateChangeListener(this);
         loadProducts();
+    }
+
+    /**
+     * Recursively installs a mouse-wheel listener on {@code root} and all its
+     * descendants that forwards wheel events to {@code target}.
+     */
+    private void installWheelForwarding(JComponent root, JScrollPane target) {
+        root.addMouseWheelListener(e -> {
+            // Re-dispatch to the scroll pane so its normal wheel handler fires
+            target.dispatchEvent(SwingUtilities.convertMouseEvent(root, e, target));
+        });
+        for (Component c : root.getComponents()) {
+            if (c instanceof JComponent jc) installWheelForwarding(jc, target);
+        }
     }
 
     private JPanel createSearchPanel() {
@@ -54,13 +100,13 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
 
         JPanel inner = new JPanel(new BorderLayout(8, 0));
         inner.setOpaque(false);
-        inner.setBorder(new EmptyBorder(6, 8, 6, 8));
+        inner.setBorder(new EmptyBorder(8, 10, 8, 10));
 
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 17));
         searchField.setBackground(ThemeManager.getInstance().getPanelBackgroundColor());
         searchField.setForeground(ThemeManager.getInstance().getTextColor());
         searchField.setBorder(new EmptyBorder(4, 10, 4, 4));
-        searchField.setPreferredSize(new Dimension(0, 40));
+        searchField.setPreferredSize(new Dimension(0, 48));
         searchField.setToolTipText("Search products by name or CPU code (Ctrl+F)");
         searchField.putClientProperty("JTextField.placeholderText", "Search products…");
         searchField.putClientProperty("JTextField.leadingIcon", IconManager.getInstance().getIcon(IconManager.SEARCH, 25, 25));
@@ -81,6 +127,9 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         productCards = new ArrayList<>();
         for (Product p : ApplicationState.getInstance().getProducts()) {
             ProductCard card = new ProductCard(p);
+            // Forward wheel events from each newly added card
+            card.addMouseWheelListener(e ->
+                scrollPane.dispatchEvent(SwingUtilities.convertMouseEvent(card, e, scrollPane)));
             productsGrid.add(card);
             productCards.add(card);
         }
@@ -93,7 +142,8 @@ public class ProductsPanel extends JPanel implements ApplicationState.StateChang
         productsGrid.removeAll();
         for (ProductCard card : productCards) {
             Product p = card.getProduct();
-            if (q.isEmpty() || p.getName().toLowerCase().contains(q) || p.getCpu().toLowerCase().contains(q)) productsGrid.add(card);
+            if (q.isEmpty() || p.getName().toLowerCase().contains(q) || p.getCpu().toLowerCase().contains(q))
+                productsGrid.add(card);
         }
         productsGrid.revalidate();
         productsGrid.repaint();
