@@ -1,0 +1,6 @@
+.*
+!.gitignore
+*.db
+receipts/
+build/
+libs/
